@@ -68,6 +68,13 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     return this.charCfg.animPrefix[this.powerState];
   }
 
+  /** `${prefix}-{pose}` if that anim exists, else fall back to another
+   *  pose — lets packs add fall/hurt/death frames at their own pace. */
+  animKey(pose, fallback) {
+    const key = `${this.animPrefix}-${pose}`;
+    return this.scene.anims.exists(key) ? key : `${this.animPrefix}-${fallback}`;
+  }
+
   get baseScale() {
     return this.powerState === 'SMALL' ? 1 : BIG_SCALE;
   }
@@ -196,7 +203,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.starUntil = this.scene.time.now + STAR_DURATION;
   }
 
-  /** Death visuals: flip and fall through the world (scene handles restart). */
+  /** Death visuals: fling up and fall through the world (scene restarts).
+   *  With a dedicated death frame (X eyes) the sprite stays upright;
+   *  packs without one keep the classic upside-down jump frame. */
   die() {
     this.isDead = true;
     this.body.checkCollision.none = true;
@@ -204,8 +213,13 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.body.setAccelerationX(0);
     this.body.setDragX(0);
     this.body.setVelocity(0, -420);
-    this.setFlipY(true);
-    this.anims.play(`${this.animPrefix}-jump`);
+    const deathKey = `${this.animPrefix}-death`;
+    if (this.scene.anims.exists(deathKey)) {
+      this.anims.play(deathKey);
+    } else {
+      this.setFlipY(true);
+      this.anims.play(`${this.animPrefix}-jump`);
+    }
   }
 
   // ----------------------------------------------------------- updates
@@ -237,8 +251,12 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     }
     body.setGravityY(body.velocity.y > 0 ? EXTRA_FALL_GRAVITY : 0);
 
-    if (!onGround) this.anims.play(`${this.animPrefix}-jump`, true);
-    else if (Math.abs(body.velocity.x) > 10) this.anims.play(`${this.animPrefix}-run`, true);
+    if (!onGround) {
+      // rising = jump pose, falling = fall pose (packs without a fall
+      // anim — placeholder worlds — keep showing the jump frame)
+      const pose = body.velocity.y > 0 ? 'fall' : 'jump';
+      this.anims.play(this.animKey(pose, 'jump'), true);
+    } else if (Math.abs(body.velocity.x) > 10) this.anims.play(`${this.animPrefix}-run`, true);
     else this.anims.play(`${this.animPrefix}-idle`, true);
   }
 
