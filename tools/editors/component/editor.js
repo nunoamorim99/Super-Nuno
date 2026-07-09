@@ -356,11 +356,32 @@ $('import-file').onchange = async (e) => {
   frames = imported;
   current = 0;
   undoStack = [];
+  importedFileName = file.name; // enables "replace imported file" export
+  refreshReplaceMode();
   e.target.value = ''; // allow re-importing the same file
   renderAll();
 };
 
 // --------------------------------------------------------------- export
+// REPLACE MODE: when a PNG was imported, the easiest edit loop is
+// "same file, new pixels" — export under the imported name, drop it
+// back in its pack folder, reload. NO manifest change needed (the
+// manifest maps key→file; the file just has new pixels).
+let importedFileName = null;
+
+function replaceMode() {
+  return importedFileName && $('exp-replace').checked;
+}
+
+function refreshReplaceMode() {
+  const row = $('exp-replace-row');
+  row.style.display = importedFileName ? '' : 'none';
+  $('exp-replace-name').textContent = importedFileName ?? '';
+  if (importedFileName) $('exp-replace').checked = true;
+  refreshExportFields();
+  refreshExport();
+}
+
 // The naming contract (ASSET-WORKFLOW.md §3):
 //   {category}-{subject}_{state}_{action}
 // EXCEPT characters: ONE master sheet per world with the canonical cell
@@ -391,8 +412,18 @@ function exportStem() {
 let refreshSeq = 0;
 async function refreshExport() {
   const seq = ++refreshSeq;
-  const stem = exportStem();
   const el = $('filename');
+
+  if (replaceMode()) {
+    el.classList.remove('invalid');
+    el.textContent = `${importedFileName}  (${frames.length} frame${frames.length > 1 ? 's' : ''}, ${SIZE}×${SIZE})`;
+    $('manifest-snippet').value =
+      `Same file, new pixels — drop ${importedFileName} back into its pack\n` +
+      `folder and reload the game. No manifest change needed.`;
+    return;
+  }
+
+  const stem = exportStem();
   el.classList.toggle('invalid', !stem);
   el.textContent = stem
     ? `${stem}.png  (${frames.length} frame${frames.length > 1 ? 's' : ''}, ${SIZE}×${SIZE})`
@@ -433,17 +464,26 @@ async function refreshExport() {
   $(id).addEventListener('input', refreshExport);
 });
 
-// state/action only exist for non-character exports
+// state/action only exist for non-character exports; the whole name
+// builder disappears in replace mode (the name is already decided)
 function refreshExportFields() {
+  const replacing = replaceMode();
   const hide = isCharacter();
-  $('exp-state').style.display = hide ? 'none' : '';
-  $('exp-action').style.display = hide ? 'none' : '';
+  $('exp-category').style.display = replacing ? 'none' : '';
+  $('exp-subject').style.display = replacing ? 'none' : '';
+  $('exp-pack').style.display = replacing ? 'none' : '';
+  $('exp-state').style.display = replacing || hide ? 'none' : '';
+  $('exp-action').style.display = replacing || hide ? 'none' : '';
 }
 $('exp-category').addEventListener('input', refreshExportFields);
+$('exp-replace')?.addEventListener('input', () => {
+  refreshExportFields();
+  refreshExport();
+});
 refreshExportFields();
 
 $('export-btn').onclick = () => {
-  const stem = exportStem();
+  const stem = replaceMode() ? importedFileName.replace(/\.png$/i, '') : exportStem();
   if (!stem) { alert('Fix the name first (see the red hint).'); return; }
 
   // frames side by side, left→right — exactly how the game slices sheets
