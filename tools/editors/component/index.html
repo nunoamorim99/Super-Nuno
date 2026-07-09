@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Super Nuno — Component Editor (dev only)</title>
+  <style>
+    /* Dev tool styling: dark, compact, function over form. */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1b1b22;
+      color: #cfcfd8;
+      font-family: monospace;
+      font-size: 13px;
+      padding: 14px;
+      user-select: none;
+    }
+    h1 { font-size: 16px; color: #ffe066; margin-bottom: 2px; }
+    .hint { color: #8a8a96; margin-bottom: 12px; }
+    .layout { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+
+    .panel {
+      background: #232329;
+      border: 1px solid #3a3a46;
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .panel h2 {
+      font-size: 12px;
+      color: #8ecbff;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    /* --- drawing canvas --- */
+    #canvas { image-rendering: pixelated; cursor: crosshair; display: block; }
+    .canvas-wrap { position: relative; }
+
+    /* --- toolbar --- */
+    .tools { display: flex; flex-direction: column; gap: 6px; }
+    button, select, input[type="text"], input[type="number"] {
+      background: #3c3c46;
+      color: #cfcfd8;
+      border: 1px solid #55555f;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 13px;
+      padding: 5px 9px;
+      cursor: pointer;
+    }
+    input[type="text"], input[type="number"] { cursor: text; }
+    button:hover { background: #4a4a56; }
+    button.active { background: #5c94fc; color: #fff; border-color: #5c94fc; }
+    button:disabled { opacity: 0.4; cursor: default; }
+
+    /* --- palette --- */
+    .swatches { display: grid; grid-template-columns: repeat(8, 22px); gap: 4px; }
+    .swatch {
+      width: 22px; height: 22px;
+      border: 1px solid #55555f; border-radius: 4px;
+      cursor: pointer;
+    }
+    .swatch.selected { outline: 2px solid #ffe066; }
+    .swatch.transparent {
+      background:
+        repeating-conic-gradient(#3a3a46 0% 25%, #26262e 0% 50%) 0 0 / 10px 10px;
+    }
+
+    /* --- frames strip --- */
+    .frames { display: flex; gap: 6px; flex-wrap: wrap; max-width: 420px; }
+    .frame-thumb {
+      border: 2px solid #3a3a46; border-radius: 4px;
+      image-rendering: pixelated; cursor: pointer;
+      background:
+        repeating-conic-gradient(#3a3a46 0% 25%, #26262e 0% 50%) 0 0 / 8px 8px;
+    }
+    .frame-thumb.current { border-color: #ffe066; }
+    .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+    label { color: #8a8a96; }
+
+    /* --- preview --- */
+    #preview {
+      image-rendering: pixelated;
+      background:
+        repeating-conic-gradient(#3a3a46 0% 25%, #26262e 0% 50%) 0 0 / 12px 12px;
+      border-radius: 4px;
+    }
+
+    /* --- export --- */
+    #filename {
+      color: #9dff8d; background: #1b1b22; border: 1px dashed #3a3a46;
+      border-radius: 6px; padding: 6px 8px; margin: 6px 0; display: block;
+      user-select: text;
+    }
+    #filename.invalid { color: #ff5555; }
+    #manifest-snippet {
+      width: 100%; height: 150px; background: #1b1b22; color: #cfcfd8;
+      border: 1px solid #3a3a46; border-radius: 6px; font-family: monospace;
+      font-size: 12px; padding: 8px; user-select: text; white-space: pre;
+    }
+    .contract { color: #8a8a96; font-size: 12px; margin-top: 6px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <h1>Component Editor <span style="color:#8a8a96">— Super Nuno (dev only)</span></h1>
+  <p class="hint">
+    Import a Kenney sprite &rarr; edit &rarr; export engine-ready. Keys:
+    <b>B</b> pencil &middot; <b>E</b> eraser &middot; <b>G</b> fill &middot;
+    <b>I</b> eyedropper &middot; <b>Ctrl+Z</b> undo
+  </p>
+
+  <div class="layout">
+    <!-- ============ tools ============ -->
+    <div class="panel tools">
+      <h2>Tools</h2>
+      <button id="tool-pencil" class="active">&#9998; Pencil (B)</button>
+      <button id="tool-eraser">&#9003; Eraser (E)</button>
+      <button id="tool-fill">&#9639; Fill (G)</button>
+      <button id="tool-eyedropper">&#128167; Pick (I)</button>
+      <button id="undo">&#8630; Undo</button>
+      <hr style="border-color:#3a3a46; margin:4px 0" />
+      <label>Frame size</label>
+      <select id="frame-size">
+        <option value="24" selected>24 &times; 24 (character)</option>
+        <option value="18">18 &times; 18 (tile)</option>
+      </select>
+      <label style="margin-top:4px"><input type="checkbox" id="grid-toggle" checked /> grid</label>
+      <label><input type="checkbox" id="onion-toggle" /> onion skin</label>
+    </div>
+
+    <!-- ============ canvas ============ -->
+    <div class="panel canvas-wrap">
+      <h2>Canvas <span id="canvas-info" style="color:#8a8a96"></span></h2>
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <!-- ============ palette ============ -->
+    <div class="panel">
+      <h2>Palette</h2>
+      <div class="swatches" id="swatches"></div>
+      <div class="row" style="margin-top:8px">
+        <input type="color" id="color-add" value="#ff00ff" title="pick a custom colour" />
+        <button id="color-add-btn">+ add</button>
+      </div>
+    </div>
+
+    <!-- ============ frames + preview ============ -->
+    <div class="panel" style="max-width:440px">
+      <h2>Frames</h2>
+      <div class="frames" id="frames"></div>
+      <div class="row" style="margin-top:8px">
+        <button id="frame-add">+ new</button>
+        <button id="frame-dup">&#10697; duplicate</button>
+        <button id="frame-del">&#10005; delete</button>
+        <button id="frame-left">&larr;</button>
+        <button id="frame-right">&rarr;</button>
+      </div>
+      <h2 style="margin-top:10px">Playback</h2>
+      <div class="row">
+        <canvas id="preview" width="96" height="96"></canvas>
+        <button id="play">&#9654; play</button>
+        <label>fps</label>
+        <input type="number" id="fps" value="10" min="1" max="30" style="width:52px" />
+      </div>
+    </div>
+
+    <!-- ============ import ============ -->
+    <div class="panel" style="max-width:300px">
+      <h2>Import PNG</h2>
+      <input type="file" id="import-file" accept="image/png" style="max-width:270px" />
+      <div class="row" style="margin-top:6px">
+        <label>cells</label>
+        <input type="number" id="import-from" value="0" min="0" style="width:58px" title="first cell index" />
+        <label>to</label>
+        <input type="number" id="import-to" value="" placeholder="end" min="0" style="width:58px" title="last cell index (blank = all)" />
+      </div>
+      <p class="contract">
+        The image is cut into a grid of frame-size cells, numbered left&rarr;right,
+        top&rarr;bottom — same indexing as the game (see ASSET-WORKFLOW.md &sect;1).
+        Use the range to grab just the cells you want from a packed Kenney sheet.
+      </p>
+    </div>
+
+    <!-- ============ export ============ -->
+    <div class="panel" style="max-width:440px">
+      <h2>Export (naming contract)</h2>
+      <div class="row">
+        <select id="exp-category">
+          <option>character</option><option>enemy</option><option>item</option>
+          <option>tile</option><option>prop</option>
+        </select>
+        <input type="text" id="exp-subject" placeholder="subject e.g. nuno" style="width:150px" />
+      </div>
+      <div class="row">
+        <select id="exp-state">
+          <option value="">state: none</option>
+          <option>small</option><option>big</option><option>power</option>
+        </select>
+        <input type="text" id="exp-action" list="actions" placeholder="action e.g. run" style="width:110px" />
+        <datalist id="actions">
+          <option>idle</option><option>run</option><option>jump</option><option>fall</option>
+          <option>hurt</option><option>death</option><option>walk</option>
+        </datalist>
+        <select id="exp-pack">
+          <option>world-1</option><option>world-2</option><option>world-3</option>
+          <option>world-4</option><option>world-5</option><option>common</option>
+        </select>
+      </div>
+      <code id="filename">&mdash;</code>
+      <button id="export-btn">&#11015; Export PNG</button>
+      <p class="contract">
+        1. Drop the PNG into <b>public/assets/packs/&lt;pack&gt;/</b>.<br />
+        2. Replace that pack's <b>manifest.json</b> with the text below — it is your
+        current manifest with the new entries already merged in.<br />
+        3. Reload the game.
+      </p>
+      <textarea id="manifest-snippet" readonly spellcheck="false" style="height:230px"></textarea>
+    </div>
+  </div>
+
+  <script type="module" src="./editor.js"></script>
+</body>
+</html>

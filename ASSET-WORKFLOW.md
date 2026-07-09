@@ -114,15 +114,39 @@ A `WorldConfig` entry points at `common` + its own world pack.
 Exported files are named by the editor, never by hand. The stem **is** the asset key.
 
 ```
-{character|enemy|item|tile|prop}-{subject}_{state}_{action}
+{enemy|item|tile|prop}-{subject}_{state}_{action}
 ```
-Examples: `nuno-baby_small_idle`, `nuno-baby_big_run`, `nuno-baby_power_throw`,
-`item-milk-bottle`, `enemy-windup-toy_walk`. Lowercase, hyphen within a token, underscore
-between tokens. Character `state` ∈ `small | big | power`.
+Examples: `item-milk-bottle`, `enemy-windup-toy_walk`. Lowercase, hyphen within a
+token, underscore between tokens.
 
 - Animation strips export as one PNG (frames left→right) + the frame data in the manifest.
 - A **typo cannot be introduced by hand** — the editor composes the name from
   dropdowns/fields and writes it. That's the whole point.
+
+### Characters are the exception: ONE sheet per world (decided 2026-07-09)
+
+Each world has a single master character sheet — file `character-nuno.png`, always
+registered in the manifest under the sheet key **`nuno`** (the key the engine reads).
+No state/action in the name; the editor knows this and updates `sheets.nuno.file`
+in the manifest for you. Every age uses the SAME canonical cell layout, so code and
+manifests transfer across worlds:
+
+| Cell | Pose | Anim entry it feeds |
+|---|---|---|
+| 0 | idle | `nuno-idle: [0]`, run = `[0, 1]` |
+| 1 | run step | `nuno-run: [0, 1]` |
+| 2 | jump | `nuno-jump` (once drawn — placeholder art uses `[1]`) |
+| 3 | fall | future `nuno-fall` |
+| 4 | hurt | future `nuno-hurt` |
+| 5 | death | future `nuno-death` |
+| 6 | power idle | `nuno-fire-idle: [6]` |
+| 7 | power run step | `nuno-fire-run: [6, 7]` |
+| 8 | power jump | `nuno-fire-jump` (once drawn — placeholder uses `[7]`) |
+
+The manifest's anim entries are the truth; the table is the convention they follow.
+When you draw a pose into a free cell, point that anim's `frames` at the cell —
+one number in the manifest. (BIG needs no cells: it's the same art at 1.5× scale;
+only the POWER state has its own look, like classic fire Mario.)
 
 ---
 

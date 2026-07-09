@@ -155,6 +155,12 @@ palette, and character source change with no code edit.
 - [ ] Switching the active world swaps its assets with zero code change.
 - [ ] Tagged `phase-2`.
 
+> **Order note (2026-07-09):** Phases 3 and 4 are executed in REVERSE order, by
+> decision — Nuno wants every frame of art authored with the project's own component
+> editor, never an external one. So the editor (Phase 4) is built first, and baby-Nuno
+> (Phase 3) is then drawn IN it — which also replaces Phase 4's "re-import trial".
+> Phase numbering and tags keep their original names.
+
 ### Phase 3 — Baby-Nuno: the first aging character
 **Goal:** The story character appears, at the locked shared collision size.
 **Brief:** Produce **baby-Nuno's full set** — idle, run, jump, fall, hurt, death, in SMALL
