@@ -41,19 +41,8 @@ export const COMMON = {
     hills: [8, 9, 10, 11],
   },
 
-  // ---- Animations (data, not code — PreloadScene creates them all) ----
-  anims: [
-    { key: 'player-idle', sheet: 'chars', frames: [0] },
-    { key: 'player-run', sheet: 'chars', frames: [0, 1], frameRate: 10, repeat: -1 },
-    { key: 'player-jump', sheet: 'chars', frames: [1] },
-    // FIRE = Kenney's orange character — a palette swap, classic style
-    { key: 'fire-idle', sheet: 'chars', frames: [6] },
-    { key: 'fire-run', sheet: 'chars', frames: [6, 7], frameRate: 10, repeat: -1 },
-    { key: 'fire-jump', sheet: 'chars', frames: [7] },
-    { key: 'coin-spin', sheet: 'tiles', frames: [151, 152], frameRate: 6, repeat: -1 },
-    { key: 'walker-walk', sheet: 'chars', frames: [18, 19], frameRate: 6, repeat: -1 },
-    { key: 'flag-wave', sheet: 'tiles', frames: [111, 112], frameRate: 3, repeat: -1 },
-  ],
+  // Animations are NOT here — they are data in each pack's manifest.json
+  // (packs/common + packs/world-N), loaded and created by PreloadScene.
 
   // ---- Visual themes, picked per level via its `theme` field ----
   // Shared across worlds in v1; a world entry may override any theme's
@@ -82,15 +71,17 @@ export const COMMON = {
 };
 
 // ---- The five life stages ----
-// `character` points at anim-key prefixes per power state; Player derives
-// `${prefix}-idle|run|jump`. Today every world still shows the Kenney base
-// character — Phase 3 swaps world 1's entry to baby-Nuno's pack keys and
-// NOTHING else has to change. That seam is the whole point of this file.
-const KENNEY_BASE_CHARACTER = {
-  sheet: 'chars',
-  idleFrame: 0,
-  animPrefix: { SMALL: 'player', BIG: 'player', FIRE: 'fire' },
-};
+// Every world's character uses the SAME keys — sheet 'nuno', anims
+// 'nuno-idle|run|jump' (+ 'nuno-fire-*') — and each world's pack manifest
+// decides which pixels those keys mean. Swapping worlds swaps the pack;
+// no code changes. `idleFrame` is the static frame HUD/Intro show — it
+// mirrors the manifest's nuno-idle and goes back to 0 for every world
+// once the real per-age sheets land (Phase 3+).
+const NUNO_CHARACTER = (idleFrame = 0) => ({
+  sheet: 'nuno',
+  idleFrame,
+  animPrefix: { SMALL: 'nuno', BIG: 'nuno', FIRE: 'nuno-fire' },
+});
 
 const KENNEY_BASE_ENEMIES = {
   walker: { sheet: 'chars', walkFrame: 18, squashedFrame: 20, walkAnim: 'walker-walk' },
@@ -103,7 +94,7 @@ export const WORLDS = {
     title: 'World 1 — Baby',
     pack: 'world-1', // asset pack folder (loading wired in Phase 2)
     startLevel: 'level1',
-    character: KENNEY_BASE_CHARACTER,
+    character: NUNO_CHARACTER(0), // placeholder: Kenney green
     enemies: KENNEY_BASE_ENEMIES,
     themes: {}, // per-theme overrides (palette re-theming, later)
     finale: 'first-dog', // Phase 8: the post-flag story scene
@@ -114,7 +105,7 @@ export const WORLDS = {
     title: 'World 2 — Kid',
     pack: 'world-2',
     startLevel: null, // levels authored in Phase 10
-    character: KENNEY_BASE_CHARACTER,
+    character: NUNO_CHARACTER(2), // placeholder: Kenney blue
     enemies: KENNEY_BASE_ENEMIES,
     themes: {},
     finale: 'futbol-champion',
@@ -125,7 +116,7 @@ export const WORLDS = {
     title: 'World 3 — Teen',
     pack: 'world-3',
     startLevel: null,
-    character: KENNEY_BASE_CHARACTER,
+    character: NUNO_CHARACTER(4), // placeholder: Kenney pink
     enemies: KENNEY_BASE_ENEMIES,
     themes: {},
     finale: 'the-request',
@@ -136,7 +127,7 @@ export const WORLDS = {
     title: 'World 4 — Adult',
     pack: 'world-4',
     startLevel: null,
-    character: KENNEY_BASE_CHARACTER,
+    character: NUNO_CHARACTER(9), // placeholder: Kenney tan
     enemies: KENNEY_BASE_ENEMIES,
     themes: {},
     finale: 'the-future-home',
@@ -147,7 +138,7 @@ export const WORLDS = {
     title: 'World 5 — Love',
     pack: 'world-5',
     startLevel: null,
-    character: KENNEY_BASE_CHARACTER,
+    character: NUNO_CHARACTER(6), // placeholder: Kenney orange (same as FIRE until real art)
     enemies: KENNEY_BASE_ENEMIES,
     themes: {},
     finale: 'one-year',
@@ -155,7 +146,19 @@ export const WORLDS = {
 };
 
 // Until the world-select map exists (Phase 6), one world is active.
-export const ACTIVE_WORLD = 1;
+// Dev builds accept ?world=N in the URL to switch without editing code —
+// that's the Phase 2 "worlds are swappable" proof, and handy for QA.
+const DEFAULT_WORLD = 1;
+
+function activeWorldId() {
+  if (import.meta.env.DEV) {
+    const n = Number(new URLSearchParams(window.location.search).get('world'));
+    if (WORLDS[n]) return n;
+  }
+  return DEFAULT_WORLD;
+}
+
+export const ACTIVE_WORLD = activeWorldId();
 
 export function getActiveWorld() {
   return WORLDS[ACTIVE_WORLD];

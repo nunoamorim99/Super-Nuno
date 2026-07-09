@@ -1,0 +1,13 @@
+{
+  "pack": "common",
+  "sheets": {
+    "tiles": { "file": "tiles.png", "frameWidth": 18, "frameHeight": 18 },
+    "chars": { "file": "chars.png", "frameWidth": 24, "frameHeight": 24 },
+    "bg": { "file": "bg.png", "frameWidth": 24, "frameHeight": 24 }
+  },
+  "anims": {
+    "coin-spin": { "sheet": "tiles", "frames": [151, 152], "frameRate": 6, "repeat": -1 },
+    "walker-walk": { "sheet": "chars", "frames": [18, 19], "frameRate": 6, "repeat": -1 },
+    "flag-wave": { "sheet": "tiles", "frames": [111, 112], "frameRate": 3, "repeat": -1 }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "pack": "world-5",
+  "sheets": {
+    "nuno": { "file": "nuno.png", "frameWidth": 24, "frameHeight": 24 }
+  },
+  "anims": {
+    "nuno-idle": { "sheet": "nuno", "frames": [6] },
+    "nuno-run": { "sheet": "nuno", "frames": [6, 7], "frameRate": 10, "repeat": -1 },
+    "nuno-jump": { "sheet": "nuno", "frames": [7] },
+    "nuno-fire-idle": { "sheet": "nuno", "frames": [6] },
+    "nuno-fire-run": { "sheet": "nuno", "frames": [6, 7], "frameRate": 10, "repeat": -1 },
+    "nuno-fire-jump": { "sheet": "nuno", "frames": [7] }
+  }
+}

@@ -1,8 +1,7 @@
 import Phaser from 'phaser';
-import { TILE, CHAR_FRAME } from '../config/constants.js';
-import { COMMON } from '../config/worlds.js';
+import { COMMON, getActiveWorld } from '../config/worlds.js';
 
-const TILEMAP_DIR = 'assets/kenney_pixel-platformer/Tilemap';
+const PACKS_DIR = 'assets/packs';
 
 // The pale sky colour baked into Kenney's background tiles — we turn it
 // transparent at load time so the hills can sit on our own blue sky.
@@ -15,33 +14,67 @@ export default class PreloadScene extends Phaser.Scene {
 
   preload() {
     const { width, height } = this.scale;
+    this.loadFailed = false;
 
     // --- Simple loading bar driven by the loader's progress event (0..1)
     this.add.rectangle(width / 2, height / 2, 324, 22, 0x222230);
-    const bar = this.add
+    this.bar = this.add
       .rectangle(width / 2 - 158, height / 2, 316, 12, 0x5c94fc)
       .setOrigin(0, 0.5)
       .setScale(0, 1);
-    this.load.on('progress', (value) => bar.setScale(value, 1));
+    this.attachLoaderEvents();
 
-    // --- Spritesheets: one image, many fixed-size frames.
-    // Phaser slices them by frameWidth/frameHeight and numbers the
-    // frames left-to-right, top-to-bottom (0, 1, 2, ...).
-    this.load.spritesheet('tiles', `${TILEMAP_DIR}/tilemap_packed.png`, {
-      frameWidth: TILE,
-      frameHeight: TILE,
-    });
-    this.load.spritesheet('chars', `${TILEMAP_DIR}/tilemap-characters_packed.png`, {
-      frameWidth: CHAR_FRAME,
-      frameHeight: CHAR_FRAME,
-    });
-    this.load.spritesheet('bg', `${TILEMAP_DIR}/tilemap-backgrounds_packed.png`, {
-      frameWidth: CHAR_FRAME,
-      frameHeight: CHAR_FRAME,
-    });
+    // --- Pass 1: just the manifests. Each pack DECLARES its sheets and
+    // animations; the game loads what the manifest says, never a folder
+    // scan. Sheets are queued in create(), once these are parsed.
+    this.load.json('manifest:common', `${PACKS_DIR}/common/manifest.json`);
+    this.load.json('manifest:world', `${PACKS_DIR}/${getActiveWorld().pack}/manifest.json`);
+  }
+
+  /** Phaser's loader drops ALL its listeners when a load pass completes,
+   *  so these must be re-attached before every pass — including the
+   *  error trap, or a bad filename in pass 2 would fail silently. */
+  attachLoaderEvents() {
+    this.load.on('progress', (value) => this.bar.setScale(value, 1));
+    // A missing file must be IMPOSSIBLE to miss — no silent black squares.
+    this.load.on('loaderror', (file) => this.failLoudly(file.key, file.src ?? file.url));
   }
 
   create() {
+    // --- Pass 2: the spritesheets each manifest lists.
+    const manifests = [
+      { base: `${PACKS_DIR}/common`, data: this.cache.json.get('manifest:common') },
+      {
+        base: `${PACKS_DIR}/${getActiveWorld().pack}`,
+        data: this.cache.json.get('manifest:world'),
+      },
+    ];
+    for (const m of manifests) {
+      if (!m.data) return; // manifest 404 — failLoudly already fired
+      for (const [key, sheet] of Object.entries(m.data.sheets)) {
+        this.load.spritesheet(key, `${m.base}/${sheet.file}`, {
+          frameWidth: sheet.frameWidth,
+          frameHeight: sheet.frameHeight,
+        });
+      }
+    }
+    this.attachLoaderEvents();
+    this.load.once('complete', () => this.onAssetsReady(manifests));
+    this.load.start();
+  }
+
+  /** Everything that needs loaded textures: generated art, anims, boot. */
+  onAssetsReady(manifests) {
+    // Belt AND suspenders: Phaser emits 'loaderror' for network failures
+    // but only console-logs a file that fails at the PROCESSING stage —
+    // so verify every sheet the manifests promised actually exists.
+    for (const m of manifests) {
+      for (const [key, sheet] of Object.entries(m.data.sheets)) {
+        if (!this.textures.exists(key)) this.failLoudly(key, `${m.base}/${sheet.file}`);
+      }
+    }
+    if (this.loadFailed) return;
+    this.createAnimations(manifests);
     // TileSprites repeat a whole texture, not a single frame of a sheet —
     // so we copy the frames we want to repeat into small standalone textures.
     const overworld = COMMON.themes.overworld;
@@ -73,8 +106,6 @@ export default class PreloadScene extends Phaser.Scene {
     // 1-UP mushroom: swap R/G — the red cap turns green.
     this.makeRecoloredTexture('mushroom-1up', 'tiles', COMMON.frames.tiles.mushroom, (r, g, b) => [g, r, b]);
 
-    this.createAnimations();
-
     // Game-wide state lives in the registry so it survives scene changes
     // and the HUD can listen for changes.
     this.registry.set('score', 0);
@@ -84,6 +115,39 @@ export default class PreloadScene extends Phaser.Scene {
     this.registry.set('world', '1-1');
 
     this.scene.start('TitleScene');
+  }
+
+  /** Big red unmissable error — a wrong filename must never fail silently. */
+  failLoudly(key, url) {
+    this.loadFailed = true;
+    const msg = `ASSET LOAD FAILED\n\nkey: "${key}"\n${url ?? ''}\n\nCheck the pack's manifest.json — the file name must match exactly.`;
+    console.error(`[Super Nuno] ${msg.replace(/\n+/g, ' — ')}`);
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0x220000, 0.92).setDepth(99);
+    this.add
+      .text(width / 2, height / 2, msg, {
+        fontFamily: 'monospace',
+        fontSize: '16px',
+        color: '#ff5555',
+        align: 'center',
+        wordWrap: { width: width - 80 },
+      })
+      .setOrigin(0.5)
+      .setDepth(100);
+  }
+
+  /** Animations are DATA in the pack manifests, created here in one loop. */
+  createAnimations(manifests) {
+    for (const m of manifests) {
+      for (const [key, a] of Object.entries(m.data.anims ?? {})) {
+        this.anims.create({
+          key,
+          frames: this.anims.generateFrameNumbers(a.sheet, { frames: a.frames }),
+          frameRate: a.frameRate ?? 0,
+          repeat: a.repeat ?? 0,
+        });
+      }
+    }
   }
 
   /**
@@ -192,18 +256,4 @@ export default class PreloadScene extends Phaser.Scene {
     canvas.refresh();
   }
 
-  createAnimations() {
-    // Animations are global (stored in the AnimationManager), so defining
-    // them once here makes them available to every scene. They are DATA in
-    // the world config, not code — Phase 2 moves that data into each
-    // pack's manifest, and this loop won't have to change.
-    for (const a of COMMON.anims) {
-      this.anims.create({
-        key: a.key,
-        frames: this.anims.generateFrameNumbers(a.sheet, { frames: a.frames }),
-        frameRate: a.frameRate ?? 0,
-        repeat: a.repeat ?? 0,
-      });
-    }
-  }
 }

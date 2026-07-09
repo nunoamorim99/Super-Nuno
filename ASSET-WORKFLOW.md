@@ -151,17 +151,23 @@ frame ranges. `PreloadScene` loads `common`'s manifest + the active world's mani
 "the game automatically picks up my edit" means: *same key, new pixels, on reload.*
 
 ```jsonc
-// packs/world-1/manifest.json  (shape, illustrative)
+// packs/world-1/manifest.json  (the real schema since Phase 2)
 {
-  "world": 1,
+  "pack": "world-1",
   "sheets": {
-    "nuno-baby": { "file": "nuno-baby.png", "frameWidth": 24, "frameHeight": 24 }
+    // key = the texture key the engine uses; file = relative to this pack folder
+    "nuno": { "file": "nuno.png", "frameWidth": 24, "frameHeight": 24 }
   },
   "anims": {
-    "nuno-baby_small_run": { "sheet": "nuno-baby", "frames": [0,1,2,3], "frameRate": 12, "repeat": -1 }
+    // key = the animation key; every world maps the SAME keys ("nuno-idle",
+    // "nuno-run", ...) onto its own pixels — that's what makes worlds swappable
+    "nuno-run": { "sheet": "nuno", "frames": [0, 1], "frameRate": 10, "repeat": -1 }
   }
 }
 ```
+
+A sheet listed in a manifest that fails to load (typo'd filename, missing file) stops the
+boot with a full-screen error naming the key and path — verified in Phase 2.
 
 ---
 
