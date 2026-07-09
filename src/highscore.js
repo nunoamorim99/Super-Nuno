@@ -1,5 +1,5 @@
 // Persistent high score (survives page reloads via localStorage).
-const KEY = 'retro-platformer-highscore';
+const KEY = 'supernuno.highscore';
 
 export function loadHighScore() {
   try {

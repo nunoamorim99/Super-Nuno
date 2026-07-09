@@ -74,7 +74,7 @@ export default class TitleScene extends Phaser.Scene {
 
     // --- logo + texts
     const logo = this.add
-      .text(width / 2, 120, 'ASTRO HOP', {
+      .text(width / 2, 120, 'SUPER NUNO', {
         fontFamily: 'monospace',
         fontSize: '64px',
         fontStyle: 'bold',

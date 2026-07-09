@@ -15,7 +15,7 @@ export function isTouchDevice() {
 
 // Remembers the player's preferred side for the controls. When swapped,
 // the action buttons move to the left and the d-pad to the right.
-const SWAP_STORAGE_KEY = 'astrohop.controlsSwapped';
+const SWAP_STORAGE_KEY = 'supernuno.controlsSwapped';
 
 function isSwapped() {
   try {

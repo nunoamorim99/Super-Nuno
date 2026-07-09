@@ -6,7 +6,14 @@
 import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 
-const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+import { existsSync } from 'node:fs';
+
+// any Chromium-based browser works for CDP; this machine has Edge, not Chrome
+const CHROME = [
+  'C:/Program Files/Google/Chrome/Application/chrome.exe',
+  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
+].find(existsSync);
 const PORT = 9224;
 const URL = 'http://localhost:5175';
 const levelId = process.argv[2] ?? 'level1';

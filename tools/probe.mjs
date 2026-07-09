@@ -6,8 +6,14 @@
 // usage: node tools/probe.mjs [scenario]   (default scenario: fireball)
 
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 
-const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+// any Chromium-based browser works for CDP; this machine has Edge, not Chrome
+const CHROME = [
+  'C:/Program Files/Google/Chrome/Application/chrome.exe',
+  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
+].find(existsSync);
 const PORT = 9223;
 const URL = 'http://localhost:5175';
 

@@ -3,7 +3,7 @@
 // sounds of the 80s were made: square and triangle waves with quick
 // pitch sweeps.
 
-const MUTE_KEY = 'retro-platformer-muted';
+const MUTE_KEY = 'supernuno.muted';
 
 class Sfx {
   constructor() {
