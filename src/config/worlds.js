@@ -94,6 +94,7 @@ export const WORLDS = {
     title: 'World 1 — Baby',
     pack: 'world-1', // asset pack folder (loading wired in Phase 2)
     startLevel: 'level1',
+    levels: ['level1', 'level2', 'level3', 'level4', 'level5'], // bonus rooms excluded: entered via pipes
     character: NUNO_CHARACTER(0), // placeholder: Kenney green
     enemies: KENNEY_BASE_ENEMIES,
     themes: {}, // per-theme overrides (palette re-theming, later)
@@ -105,6 +106,7 @@ export const WORLDS = {
     title: 'World 2 — Kid',
     pack: 'world-2',
     startLevel: null, // levels authored in Phase 10
+    levels: [],
     character: NUNO_CHARACTER(2), // placeholder: Kenney blue
     enemies: KENNEY_BASE_ENEMIES,
     themes: {},
@@ -116,6 +118,7 @@ export const WORLDS = {
     title: 'World 3 — Teen',
     pack: 'world-3',
     startLevel: null,
+    levels: [],
     character: NUNO_CHARACTER(4), // placeholder: Kenney pink
     enemies: KENNEY_BASE_ENEMIES,
     themes: {},
@@ -127,6 +130,7 @@ export const WORLDS = {
     title: 'World 4 — Adult',
     pack: 'world-4',
     startLevel: null,
+    levels: [],
     character: NUNO_CHARACTER(9), // placeholder: Kenney tan
     enemies: KENNEY_BASE_ENEMIES,
     themes: {},
@@ -138,6 +142,7 @@ export const WORLDS = {
     title: 'World 5 — Love',
     pack: 'world-5',
     startLevel: null,
+    levels: [],
     character: NUNO_CHARACTER(6), // placeholder: Kenney orange (same as FIRE until real art)
     enemies: KENNEY_BASE_ENEMIES,
     themes: {},
@@ -145,15 +150,23 @@ export const WORLDS = {
   },
 };
 
-// Until the world-select map exists (Phase 6), one world is active.
-// Dev builds accept ?world=N in the URL to switch without editing code —
-// that's the Phase 2 "worlds are swappable" proof, and handy for QA.
+// One world is active per boot — its pack loads in PreloadScene. The
+// world-select map switches worlds by saving the choice and reloading
+// the page (assets are boot-time by design; a reload IS the world door).
+// Dev builds also accept ?world=N in the URL for QA.
 const DEFAULT_WORLD = 1;
+const WORLD_KEY = 'supernuno.activeWorld';
 
 function activeWorldId() {
   if (import.meta.env.DEV) {
     const n = Number(new URLSearchParams(window.location.search).get('world'));
     if (WORLDS[n]) return n;
+  }
+  try {
+    const saved = Number(localStorage.getItem(WORLD_KEY));
+    if (WORLDS[saved]?.startLevel) return saved;
+  } catch {
+    /* storage blocked */
   }
   return DEFAULT_WORLD;
 }
@@ -162,6 +175,16 @@ export const ACTIVE_WORLD = activeWorldId();
 
 export function getActiveWorld() {
   return WORLDS[ACTIVE_WORLD];
+}
+
+/** Persist the chosen world and reboot into its pack. */
+export function switchWorld(id) {
+  try {
+    localStorage.setItem(WORLD_KEY, String(id));
+  } catch {
+    /* storage blocked */
+  }
+  window.location.reload();
 }
 
 /** A level's theme = the COMMON theme + the active world's overrides. */

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { loadHighScore } from '../highscore.js';
 import { COMMON, getActiveWorld } from '../config/worlds.js';
+import { lastLevel, setLastLevel } from '../save/progress.js';
 
 const F = COMMON.frames.tiles;
 
@@ -110,7 +111,7 @@ export default class TitleScene extends Phaser.Scene {
       .setStroke('#000000', 3);
 
     this.add
-      .text(width / 2, 210, `HI ${String(loadHighScore()).padStart(6, '0')}`, {
+      .text(width / 2, 205, `HI ${String(loadHighScore()).padStart(6, '0')}`, {
         fontFamily: 'monospace',
         fontSize: '18px',
         fontStyle: 'bold',
@@ -119,16 +120,7 @@ export default class TitleScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setStroke('#000000', 3);
 
-    const prompt = this.add
-      .text(width / 2, 290, 'PRESS START  /  TAP TO START', {
-        fontFamily: 'monospace',
-        fontSize: '20px',
-        fontStyle: 'bold',
-        color: '#ffffff',
-      })
-      .setOrigin(0.5)
-      .setStroke('#000000', 4);
-    this.tweens.add({ targets: prompt, alpha: 0.25, duration: 550, yoyo: true, repeat: -1 });
+    this.buildMenu(width);
 
     // fullscreen toggle (works on desktop and Android; iPhones don't
     // support the Fullscreen API)
@@ -150,16 +142,99 @@ export default class TitleScene extends Phaser.Scene {
       else this.scale.startFullscreen();
     });
 
-    // --- start: keyboard, mouse or touch
-    const start = () => {
-      this.registry.set('score', 0);
-      this.registry.set('coins', 0);
-      this.registry.set('lives', 3);
-      this.scene.start('IntroScene', { levelId: 'level1' });
+  }
+
+  // ------------------------------------------------------------- menu
+
+  /** Fresh run counters, then off to a level. */
+  startRun(levelId) {
+    this.registry.set('score', 0);
+    this.registry.set('coins', 0);
+    this.registry.set('lives', 3);
+    setLastLevel(levelId);
+    this.scene.start('IntroScene', { levelId });
+  }
+
+  buildMenu(width) {
+    const world = getActiveWorld();
+    const resume = lastLevel();
+
+    const items = [
+      { label: 'NEW GAME', run: () => this.startRun(world.startLevel ?? 'level1') },
+      {
+        label: 'CONTINUE',
+        enabled: !!resume,
+        run: () => this.startRun(resume),
+      },
+      { label: 'SELECT LEVEL', run: () => this.scene.start('WorldSelectScene') },
+      { label: 'SCOREBOARD', run: () => this.scene.start('ScoreboardScene') },
+    ];
+    // the two editors are dev-only and must not exist in the public build
+    if (import.meta.env.DEV) {
+      items.push(
+        {
+          label: 'LEVEL EDITOR',
+          run: () => this.scene.start('GameScene', { levelId: resume ?? world.startLevel, editorOpen: true }),
+        },
+        {
+          label: 'COMPONENT EDITOR',
+          run: () => window.open('tools/editors/component/index.html', '_blank'),
+        }
+      );
+    }
+
+    this.menuIndex = 0;
+    const startY = 252;
+    const step = 27;
+    this.menuTexts = items.map((item, i) => {
+      const enabled = item.enabled !== false;
+      const text = this.add
+        .text(width / 2, startY + i * step, item.label, {
+          fontFamily: 'monospace',
+          fontSize: '19px',
+          fontStyle: 'bold',
+          color: enabled ? '#ffffff' : '#777788',
+        })
+        .setOrigin(0.5)
+        .setStroke('#000000', 4);
+      if (enabled) {
+        text.setInteractive({ useHandCursor: true });
+        text.on('pointerover', () => this.selectItem(i));
+        text.on('pointerdown', () => {
+          this.selectItem(i);
+          item.run();
+        });
+      }
+      return { text, item, enabled };
+    });
+
+    const move = (dir) => {
+      let i = this.menuIndex;
+      do i = (i + dir + items.length) % items.length;
+      while (this.menuTexts[i].enabled === false);
+      this.selectItem(i);
     };
-    this.input.keyboard.once('keydown-SPACE', start);
-    this.input.keyboard.once('keydown-ENTER', start);
-    this.input.once('pointerdown', start);
+    this.input.keyboard.on('keydown-UP', () => move(-1));
+    this.input.keyboard.on('keydown-DOWN', () => move(1));
+    this.input.keyboard.on('keydown-W', () => move(-1));
+    this.input.keyboard.on('keydown-S', () => move(1));
+    const activate = () => this.menuTexts[this.menuIndex].item.run();
+    this.input.keyboard.on('keydown-ENTER', activate);
+    this.input.keyboard.on('keydown-SPACE', activate);
+
+    // skip CONTINUE if there's nothing to continue
+    if (this.menuTexts[0].enabled === false) move(1);
+    this.selectItem(this.menuIndex);
+  }
+
+  selectItem(i) {
+    if (this.menuTexts[i].enabled === false) return;
+    this.menuIndex = i;
+    this.menuTexts.forEach(({ text, item, enabled }, j) => {
+      const sel = j === i;
+      text.setColor(sel ? '#ffe066' : enabled ? '#ffffff' : '#777788');
+      text.setText(sel ? `▶ ${item.label}` : item.label);
+    });
   }
 
   update() {

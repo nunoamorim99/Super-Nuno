@@ -6,6 +6,7 @@ import { LEVELS } from '../levels/index.js';
 import { sfx } from '../audio/sfx.js';
 import { TILE, GAME_WIDTH, GAME_HEIGHT } from '../config/constants.js';
 import { COMMON, getActiveWorld, resolveTheme } from '../config/worlds.js';
+import { markCompleted, setLastLevel } from '../save/progress.js';
 
 const ROWS = GAME_HEIGHT / TILE; // 25 — world height is fixed
 
@@ -48,6 +49,7 @@ export default class GameScene extends Phaser.Scene {
     // Dev level editor: a full ROWS×width char matrix that overrides the
     // level's own rows (the editor rebuilds the scene through this).
     this.editorRows = data.editorRows ?? null;
+    this.editorOpen = data.editorOpen ?? false; // menu asked to open it
     this.editorActive = false;
   }
 
@@ -823,6 +825,10 @@ export default class GameScene extends Phaser.Scene {
   finishLevel() {
     this.autoPhase = 'done';
     this.player.body.setVelocityX(0);
+
+    // progress: this level is done; Continue points at the next one
+    markCompleted(this.levelId);
+    if (this.level.next !== 'end') setLastLevel(this.level.next);
 
     // remaining time becomes points (50 per second, like the classics)
     const t = this.registry.get('time') ?? 0;

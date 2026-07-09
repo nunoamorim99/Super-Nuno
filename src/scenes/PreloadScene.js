@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COMMON, getActiveWorld } from '../config/worlds.js';
+import { COMMON, WORLDS, getActiveWorld } from '../config/worlds.js';
 
 const PACKS_DIR = 'assets/packs';
 
@@ -27,8 +27,12 @@ export default class PreloadScene extends Phaser.Scene {
     // --- Pass 1: just the manifests. Each pack DECLARES its sheets and
     // animations; the game loads what the manifest says, never a folder
     // scan. Sheets are queued in create(), once these are parsed.
+    // ALL world manifests load (tiny JSONs) — the world-select map needs
+    // every age's portrait, not just the active world's.
     this.load.json('manifest:common', `${PACKS_DIR}/common/manifest.json`);
-    this.load.json('manifest:world', `${PACKS_DIR}/${getActiveWorld().pack}/manifest.json`);
+    for (const world of Object.values(WORLDS)) {
+      this.load.json(`manifest:${world.pack}`, `${PACKS_DIR}/${world.pack}/manifest.json`);
+    }
   }
 
   /** Phaser's loader drops ALL its listeners when a load pass completes,
@@ -41,12 +45,14 @@ export default class PreloadScene extends Phaser.Scene {
   }
 
   create() {
-    // --- Pass 2: the spritesheets each manifest lists.
+    // --- Pass 2: the spritesheets the manifests list. Full sheets for
+    // common + the ACTIVE world; from the other worlds only the `nuno`
+    // character sheet, keyed nuno-w{id} (world-select portraits).
     const manifests = [
       { base: `${PACKS_DIR}/common`, data: this.cache.json.get('manifest:common') },
       {
         base: `${PACKS_DIR}/${getActiveWorld().pack}`,
-        data: this.cache.json.get('manifest:world'),
+        data: this.cache.json.get(`manifest:${getActiveWorld().pack}`),
       },
     ];
     for (const m of manifests) {
@@ -57,6 +63,18 @@ export default class PreloadScene extends Phaser.Scene {
           frameHeight: sheet.frameHeight,
         });
       }
+    }
+    this.portraitKeys = {};
+    for (const world of Object.values(WORLDS)) {
+      const data = this.cache.json.get(`manifest:${world.pack}`);
+      const nuno = data?.sheets?.nuno;
+      if (!nuno) continue;
+      const key = `nuno-w${world.id}`;
+      this.portraitKeys[key] = `${PACKS_DIR}/${world.pack}/${nuno.file}`;
+      this.load.spritesheet(key, this.portraitKeys[key], {
+        frameWidth: nuno.frameWidth,
+        frameHeight: nuno.frameHeight,
+      });
     }
     this.attachLoaderEvents();
     this.load.once('complete', () => this.onAssetsReady(manifests));
@@ -72,6 +90,9 @@ export default class PreloadScene extends Phaser.Scene {
       for (const [key, sheet] of Object.entries(m.data.sheets)) {
         if (!this.textures.exists(key)) this.failLoudly(key, `${m.base}/${sheet.file}`);
       }
+    }
+    for (const [key, url] of Object.entries(this.portraitKeys)) {
+      if (!this.textures.exists(key)) this.failLoudly(key, url);
     }
     if (this.loadFailed) return;
     this.createAnimations(manifests);

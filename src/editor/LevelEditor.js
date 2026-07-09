@@ -66,6 +66,8 @@ export function attachEditor(scene) {
     // travelled to another level mid-edit (shouldn't happen; be safe)
     state.active = false;
     destroyUI();
+  } else if (scene.editorOpen) {
+    enter(scene); // the title menu's "Level editor" option
   }
 
   // QA handle: tools/probes drive the editor through this (dev only)

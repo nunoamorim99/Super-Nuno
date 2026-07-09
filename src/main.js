@@ -3,6 +3,9 @@ import { GAME_WIDTH, PORTRAIT_WIDTH, GAME_HEIGHT, GRAVITY_Y } from './config/con
 import { isTouchDevice } from './input/TouchControls.js';
 import PreloadScene from './scenes/PreloadScene.js';
 import TitleScene from './scenes/TitleScene.js';
+import WorldSelectScene from './scenes/WorldSelectScene.js';
+import LevelSelectScene from './scenes/LevelSelectScene.js';
+import ScoreboardScene from './scenes/ScoreboardScene.js';
 import IntroScene from './scenes/IntroScene.js';
 import GameScene from './scenes/GameScene.js';
 import HUDScene from './scenes/HUDScene.js';
@@ -47,6 +50,9 @@ const config = {
   scene: [
     PreloadScene,
     TitleScene,
+    WorldSelectScene,
+    LevelSelectScene,
+    ScoreboardScene,
     IntroScene,
     GameScene,
     HUDScene,
