@@ -45,6 +45,10 @@ export default class GameScene extends Phaser.Scene {
     // through pipe travel so the world keeps its state across the trip.
     // Death and level changes do NOT carry it, so everything respawns.
     this.consumedAll = data.consumed ?? {};
+    // Dev level editor: a full ROWS×width char matrix that overrides the
+    // level's own rows (the editor rebuilds the scene through this).
+    this.editorRows = data.editorRows ?? null;
+    this.editorActive = false;
   }
 
   create() {
@@ -110,6 +114,13 @@ export default class GameScene extends Phaser.Scene {
     if (this.flagZone) {
       this.physics.add.overlap(this.player, this.flagZone, this.startFlagSequence, null, this);
     }
+
+    // Dev-only level editor (press E). The whole module is stripped from
+    // production builds: this block is dead code there, so the import —
+    // and everything it pulls in — never ships.
+    if (import.meta.env.DEV) {
+      import('../editor/LevelEditor.js').then((m) => m.attachEditor(this));
+    }
   }
 
   // ----------------------------------------------------- grid parsing
@@ -117,6 +128,8 @@ export default class GameScene extends Phaser.Scene {
   /** Pad the level rows into a full ROWS×width char matrix (bottom-anchored). */
   buildMatrix() {
     const { rows, width } = this.level;
+    // editor override: already a full matrix, just normalize row length
+    if (this.editorRows) return this.editorRows.map((r) => r.padEnd(width, ' '));
     const empty = ' '.repeat(width);
     const pad = Array(ROWS - rows.length).fill(empty);
     return pad.concat(rows.map((r) => r.padEnd(width, ' ')));
@@ -857,7 +870,7 @@ export default class GameScene extends Phaser.Scene {
       delay: 1000,
       loop: true,
       callback: () => {
-        if (this.autoPhase || this.player.isDead) return;
+        if (this.autoPhase || this.player.isDead || this.editorActive) return;
         const t = (this.registry.get('time') ?? 0) - 1;
         this.registry.set('time', Math.max(0, t));
         if (t <= 0) this.killPlayer(); // time up — power state doesn't save you
@@ -872,7 +885,7 @@ export default class GameScene extends Phaser.Scene {
 
   /** Also called by the HUD's pause button. */
   pauseGame() {
-    if (this.autoPhase || this.player.isDead || this.scene.isPaused()) return;
+    if (this.autoPhase || this.player.isDead || this.scene.isPaused() || this.editorActive) return;
     this.scene.launch('PauseScene');
     this.scene.pause();
   }
@@ -892,6 +905,8 @@ export default class GameScene extends Phaser.Scene {
     if (this.hills) {
       this.hills.tilePositionX = (this.cameras.main.scrollX * 0.4) / 3;
     }
+
+    if (this.editorActive) return; // level editor owns the scene
 
     if (this.player.isDead) return;
 
