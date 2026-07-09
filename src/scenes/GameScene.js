@@ -5,7 +5,7 @@ import { touchState } from '../input/TouchControls.js';
 import { LEVELS } from '../levels/index.js';
 import { sfx } from '../audio/sfx.js';
 import { TILE, GAME_WIDTH, GAME_HEIGHT } from '../config/constants.js';
-import { COMMON, getActiveWorld, resolveTheme } from '../config/worlds.js';
+import { COMMON, getActiveWorld, resolveTheme, resolveGfx } from '../config/worlds.js';
 import { markCompleted, setLastLevel, recordLevelScore } from '../save/progress.js';
 
 const ROWS = GAME_HEIGHT / TILE; // 25 — world height is fixed
@@ -57,6 +57,7 @@ export default class GameScene extends Phaser.Scene {
     this.level = LEVELS[this.levelId];
     this.worldCfg = getActiveWorld();
     this.theme = resolveTheme(this.worldCfg, this.level.theme);
+    this.gfx = resolveGfx(this.worldCfg); // world-skinned game grammar
     this.worldWidth = this.level.width * TILE;
 
     if (!this.scene.isActive('HUDScene')) this.scene.launch('HUDScene');
@@ -154,12 +155,14 @@ export default class GameScene extends Phaser.Scene {
         const x = col * TILE + TILE / 2;
         const y = row * TILE + TILE / 2;
 
+        const terrainSheet = this.theme.terrainSheet ?? 'tiles';
+
         if (ch === 'X') {
           // merge the whole horizontal run into ONE body (no seams)
           const start = col;
           while (col < width && grid[row][col] === 'X') {
             const frame = isFilled(row - 1, col) ? this.theme.terrainFill : this.theme.terrainTop;
-            this.add.image(col * TILE + TILE / 2, y, 'tiles', frame);
+            this.add.image(col * TILE + TILE / 2, y, terrainSheet, frame);
             col++;
           }
           const run = col - start;
@@ -170,7 +173,7 @@ export default class GameScene extends Phaser.Scene {
         if (ch === 'x') {
           // decorative terrain (castles etc.) — visual only, no body
           const frame = isFilled(row - 1, col) ? this.theme.terrainFill : this.theme.terrainTop;
-          this.add.image(x, y, 'tiles', frame);
+          this.add.image(x, y, terrainSheet, frame);
           col++;
           continue;
         }
@@ -189,22 +192,22 @@ export default class GameScene extends Phaser.Scene {
 
         switch (ch) {
           case 'B':
-            if (!gone) this.addBlock(x, y, F.brick, 'brick', null, key);
+            if (!gone) this.addBlock(x, y, { sheet: 'tiles', frame: F.brick }, 'brick', null, key);
             break;
           case '?':
-            if (gone) this.addBlock(x, y, F.blockUsed, 'used', null, key);
-            else this.addBlock(x, y, F.blockQuestion, 'question', 'coin', key);
+            if (gone) this.addBlock(x, y, this.gfx.blockUsed, 'used', null, key);
+            else this.addBlock(x, y, this.gfx.blockQuestion, 'question', 'coin', key);
             break;
           case 'M':
-            if (gone) this.addBlock(x, y, F.blockUsed, 'used', null, key);
-            else this.addBlock(x, y, F.blockQuestion, 'question', 'powerup', key);
+            if (gone) this.addBlock(x, y, this.gfx.blockUsed, 'used', null, key);
+            else this.addBlock(x, y, this.gfx.blockQuestion, 'question', 'powerup', key);
             break;
           case 'S':
-            if (gone) this.addBlock(x, y, F.blockUsed, 'used', null, key);
-            else this.addBlock(x, y, F.blockQuestion, 'question', 'star', key);
+            if (gone) this.addBlock(x, y, this.gfx.blockUsed, 'used', null, key);
+            else this.addBlock(x, y, this.gfx.blockQuestion, 'question', 'star', key);
             break;
           case 'H':
-            if (gone) this.addBlock(x, y, F.blockUsed, 'used', null, key);
+            if (gone) this.addBlock(x, y, this.gfx.blockUsed, 'used', null, key);
             else this.addHiddenBlock(x, y, key);
             break;
           case 'c': {
@@ -312,8 +315,8 @@ export default class GameScene extends Phaser.Scene {
     this.doorX = x;
   }
 
-  addBlock(x, y, frame, type, content = null, key = null) {
-    const block = this.blocks.create(x, y, 'tiles', frame);
+  addBlock(x, y, spec, type, content = null, key = null) {
+    const block = this.blocks.create(x, y, spec.sheet, spec.frame);
     block.setData('type', type);
     if (content) block.setData('content', content);
     if (key) block.setData('key', key);
@@ -322,7 +325,7 @@ export default class GameScene extends Phaser.Scene {
 
   /** Invisible block: no body until hit from below (via its sensor). */
   addHiddenBlock(x, y, key) {
-    const block = this.addBlock(x, y, F.blockUsed, 'hidden', null, key);
+    const block = this.addBlock(x, y, this.gfx.blockUsed, 'hidden', null, key);
     block.setVisible(false);
     block.body.enable = false;
 
@@ -430,7 +433,7 @@ export default class GameScene extends Phaser.Scene {
   openQuestionBlock(block) {
     const content = block.getData('content');
     block.setData('type', 'used');
-    block.setFrame(F.blockUsed);
+    block.setTexture(this.gfx.blockUsed.sheet, this.gfx.blockUsed.frame);
     this.consume(block.getData('key'));
     this.bumpBlock(block);
 
@@ -449,8 +452,9 @@ export default class GameScene extends Phaser.Scene {
         onComplete: () => coin.destroy(),
       });
     } else if (content === 'powerup') {
-      if (this.player.powerState === 'SMALL') this.spawnWalkingItem(block, 'mushroom', 'tiles', F.mushroom);
-      else this.spawnFireGem(block);
+      if (this.player.powerState === 'SMALL') {
+        this.spawnWalkingItem(block, 'mushroom', this.gfx.growItem.sheet, this.gfx.growItem.frame);
+      } else this.spawnFireGem(block);
     } else if (content === 'star') {
       this.spawnStar(block);
     }
@@ -544,7 +548,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   spawnFireGem(block) {
-    const gem = this.items.create(block.x, block.y, 'gem-fire');
+    const gem = this.items.create(block.x, block.y, this.gfx.powerItem.sheet, this.gfx.powerItem.frame);
     gem.setData('kind', 'fireGem');
     gem.body.setAllowGravity(false);
     this.emergeItem(block, gem, () => {});

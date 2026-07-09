@@ -1,14 +1,15 @@
 import { sparse, ground, gap } from './builder.js';
 
-// WORLD 1-2 — underground: cave ceiling, darker palette, more vertical
+// WORLD 1-2 BRAGA — the old town at dusk: granite streets, enclosed
+// alleys (the cave layout reads as narrow Braga streets), more vertical
 // platforming. Full 25 rows (the ceiling needs the top of the world).
 
 const W = 200;
 
 export default {
-  name: 'WORLD 1-2',
-  theme: 'underground',
-  next: 'level3',
+  name: 'WORLD 1-2 BRAGA',
+  theme: 'braga',
+  next: 'end', // world 1 = two levels; the First Dog finale plays after this
   width: W,
   rows: [
     // r0/r1 — cave ceiling

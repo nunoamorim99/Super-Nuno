@@ -94,10 +94,37 @@ export const WORLDS = {
     title: 'World 1 — Baby',
     pack: 'world-1', // asset pack folder (loading wired in Phase 2)
     startLevel: 'level1',
-    levels: ['level1', 'level2', 'level3', 'level4', 'level5'], // bonus rooms excluded: entered via pipes
-    character: NUNO_CHARACTER(0), // placeholder: Kenney green
-    enemies: KENNEY_BASE_ENEMIES,
-    themes: {}, // per-theme overrides (palette re-theming, later)
+    levels: ['level1', 'level2'], // 1-1 Lisboa · 1-2 Braga (v1 scope)
+    character: NUNO_CHARACTER(0),
+    // wind-up toy: same walker BEHAVIOUR, world-1 pack ART
+    enemies: {
+      walker: { sheet: 'w1-enemy', walkFrame: 0, squashedFrame: 2, walkAnim: 'w1-walker-walk' },
+    },
+    // world-skinned game grammar: gift-box ? blocks, milk bottle, pacifier
+    gfx: {
+      blockQuestion: { sheet: 'w1', frame: 0 },
+      blockUsed: { sheet: 'w1', frame: 1 },
+      growItem: { sheet: 'w1', frame: 2 },
+      powerItem: { sheet: 'w1', frame: 3 },
+    },
+    themes: {
+      // Lisboa: calçada portuguesa under a warm sky, skyline parallax
+      overworld: {
+        sky: '#6fb5f5',
+        terrainSheet: 'w1',
+        terrainTop: 4,
+        terrainFill: 5,
+        parallaxSource: { sheet: 'w1-skyline', frames: [0, 1, 2, 3] },
+      },
+      // Braga at dusk: granite with moss, quiet enclosed streets
+      braga: {
+        sky: '#31405e',
+        terrainSheet: 'w1',
+        terrainTop: 6,
+        terrainFill: 7,
+        parallax: false,
+      },
+    },
     finale: 'first-dog', // Phase 8: the post-flag story scene
   },
   2: {
@@ -187,9 +214,23 @@ export function switchWorld(id) {
   window.location.reload();
 }
 
-/** A level's theme = the COMMON theme + the active world's overrides. */
+/** A level's theme = the COMMON theme + the active world's overrides.
+ *  A world may also define themes of its own (base undefined is fine). */
 export function resolveTheme(world, themeName) {
-  const base = COMMON.themes[themeName];
+  const base = COMMON.themes[themeName] ?? {};
   const override = world.themes?.[themeName];
   return override ? { ...base, ...override } : base;
+}
+
+/** The world's take on the game grammar: COMMON art unless the world's
+ *  pack reskins an element. Every entry is { sheet, frame }. */
+export function resolveGfx(world) {
+  const t = COMMON.frames.tiles;
+  const defaults = {
+    blockQuestion: { sheet: 'tiles', frame: t.blockQuestion },
+    blockUsed: { sheet: 'tiles', frame: t.blockUsed },
+    growItem: { sheet: 'tiles', frame: t.mushroom },
+    powerItem: { sheet: 'gem-fire', frame: 0 }, // generated recolor
+  };
+  return { ...defaults, ...(world.gfx ?? {}) };
 }

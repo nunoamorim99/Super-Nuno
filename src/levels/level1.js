@@ -1,13 +1,14 @@
 import { sparse, ground, gap } from './builder.js';
 
-// WORLD 1-1 — overworld, ~6.3 screens wide.
+// WORLD 1-1 LISBOA — calçada portuguesa underfoot, the 25 de Abril and
+// Torre de Belém on the horizon. ~6.3 screens wide.
 // Rows are bottom-anchored: the last row is the bottom of the world.
 // See LEVELS.md for the character legend.
 
 const W = 280;
 
 export default {
-  name: 'WORLD 1-1',
+  name: 'WORLD 1-1 LISBOA',
   theme: 'overworld',
   next: 'level2',
   // the 't' pipe leads to the bonus room and its exit drops you at col 168

@@ -13,6 +13,8 @@ export const FINALES = {
     title: 'O PRIMEIRO CÃO',
     pt: 'Antes de saber andar, já tinha um melhor amigo.',
     sky: '#79c8f2', // soft morning blue
+    // the memory itself: sprite from the world-1 pack (tail wagging)
+    prop: { sheet: 'w1-dog', frame: 0, anim: 'w1-dog-wag', scale: 1.5 },
   },
   'futbol-champion': {
     world: 2,

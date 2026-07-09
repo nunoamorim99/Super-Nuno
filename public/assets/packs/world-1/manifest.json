@@ -1,7 +1,11 @@
 {
   "pack": "world-1",
   "sheets": {
-    "nuno": { "file": "character-nuno.png", "frameWidth": 24, "frameHeight": 24 }
+    "nuno": { "file": "character-nuno.png", "frameWidth": 24, "frameHeight": 24 },
+    "w1": { "file": "w1.png", "frameWidth": 18, "frameHeight": 18 },
+    "w1-enemy": { "file": "w1-enemy.png", "frameWidth": 24, "frameHeight": 24 },
+    "w1-dog": { "file": "w1-dog.png", "frameWidth": 24, "frameHeight": 24 },
+    "w1-skyline": { "file": "w1-skyline.png", "frameWidth": 24, "frameHeight": 24 }
   },
   "anims": {
     "nuno-idle": { "sheet": "nuno", "frames": [0] },
@@ -13,6 +17,8 @@
     "nuno-fire-idle": { "sheet": "nuno", "frames": [6] },
     "nuno-fire-run": { "sheet": "nuno", "frames": [6, 7], "frameRate": 10, "repeat": -1 },
     "nuno-fire-jump": { "sheet": "nuno", "frames": [8] },
-    "nuno-fire-fall": { "sheet": "nuno", "frames": [8] }
+    "nuno-fire-fall": { "sheet": "nuno", "frames": [8] },
+    "w1-walker-walk": { "sheet": "w1-enemy", "frames": [0, 1], "frameRate": 6, "repeat": -1 },
+    "w1-dog-wag": { "sheet": "w1-dog", "frames": [0, 1], "frameRate": 3, "repeat": -1 }
   }
 }

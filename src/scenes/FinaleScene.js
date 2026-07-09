@@ -32,16 +32,25 @@ export default class FinaleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // the memory marker Nuno walks toward (placeholder: a glowing spot)
-    const marker = this.add.circle(width * 0.72, 402, 10, 0xffe066, 0.9);
-    this.tweens.add({
-      targets: marker,
-      alpha: 0.4,
-      scale: 1.3,
-      duration: 700,
-      yoyo: true,
-      repeat: -1,
-    });
+    // the memory Nuno walks toward: the world's prop if its pack has
+    // one (world 1: the first dog), else a glowing placeholder spot
+    const prop = finale.prop;
+    if (prop && this.textures.exists(prop.sheet)) {
+      const sprite = this.add
+        .sprite(width * 0.72, 414 - (12 * (prop.scale ?? 1)), prop.sheet, prop.frame)
+        .setScale(prop.scale ?? 1);
+      if (prop.anim) sprite.play(prop.anim);
+    } else {
+      const marker = this.add.circle(width * 0.72, 402, 10, 0xffe066, 0.9);
+      this.tweens.add({
+        targets: marker,
+        alpha: 0.4,
+        scale: 1.3,
+        duration: 700,
+        yoyo: true,
+        repeat: -1,
+      });
+    }
 
     // --- Nuno walks into the scene, stops by the marker
     const char = getActiveWorld().character;

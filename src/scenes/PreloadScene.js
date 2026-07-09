@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COMMON, WORLDS, getActiveWorld } from '../config/worlds.js';
+import { COMMON, WORLDS, getActiveWorld, resolveTheme } from '../config/worlds.js';
 
 const PACKS_DIR = 'assets/packs';
 
@@ -98,10 +98,18 @@ export default class PreloadScene extends Phaser.Scene {
     this.createAnimations(manifests);
     // TileSprites repeat a whole texture, not a single frame of a sheet —
     // so we copy the frames we want to repeat into small standalone textures.
-    const overworld = COMMON.themes.overworld;
-    this.makeTilingTexture('tex-grass-top', 'tiles', [overworld.terrainTop]);
-    this.makeTilingTexture('tex-dirt', 'tiles', [overworld.terrainFill]);
-    this.makeTilingTexture('tex-hills', 'bg', COMMON.frames.hills, BG_SKY_COLOR);
+    // The ACTIVE world's overworld theme decides what ground and parallax
+    // look like (world 1: calçada + the Lisbon skyline).
+    const overworld = resolveTheme(getActiveWorld(), 'overworld');
+    const terrainSheet = overworld.terrainSheet ?? 'tiles';
+    this.makeTilingTexture('tex-grass-top', terrainSheet, [overworld.terrainTop]);
+    this.makeTilingTexture('tex-dirt', terrainSheet, [overworld.terrainFill]);
+    const par = overworld.parallaxSource ?? {
+      sheet: 'bg',
+      frames: COMMON.frames.hills,
+      colorKey: BG_SKY_COLOR,
+    };
+    this.makeTilingTexture('tex-hills', par.sheet, par.frames, par.colorKey ?? null);
     this.makeFireballTexture();
 
     // Tints in Phaser MULTIPLY colours, so they can only darken — an
