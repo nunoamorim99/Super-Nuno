@@ -845,7 +845,8 @@ export default class GameScene extends Phaser.Scene {
     this.cameras.main.fadeOut(700);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       if (this.level.next === 'end') {
-        this.scene.start('EndScene');
+        // the world is complete — its finale tells the memory, then EndScene
+        this.scene.start('FinaleScene', { finale: this.worldCfg.finale });
       } else {
         this.scene.start('IntroScene', {
           levelId: this.level.next,

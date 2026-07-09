@@ -8,6 +8,7 @@ import LevelSelectScene from './scenes/LevelSelectScene.js';
 import ScoreboardScene from './scenes/ScoreboardScene.js';
 import IntroScene from './scenes/IntroScene.js';
 import GameScene from './scenes/GameScene.js';
+import FinaleScene from './scenes/FinaleScene.js';
 import HUDScene from './scenes/HUDScene.js';
 import PauseScene from './scenes/PauseScene.js';
 import GameOverScene from './scenes/GameOverScene.js';
@@ -55,6 +56,7 @@ const config = {
     ScoreboardScene,
     IntroScene,
     GameScene,
+    FinaleScene,
     HUDScene,
     PauseScene,
     GameOverScene,
