@@ -1,27 +1,29 @@
 import Phaser from 'phaser';
-
-const WALK_SPEED = 40;
-const FRAME_WALK = 18; // blue slime: two walk frames (18, 19)...
-const FRAME_SQUASHED = 20; // ...and a ready-made flattened frame
+import { ENEMY_WALK_SPEED, ENEMY_BODY } from '../config/constants.js';
+import { getActiveWorld } from '../config/worlds.js';
 
 // A goomba-style patrolling enemy. Extending Arcade.Sprite means Phaser
 // calls our preUpdate() automatically every frame — the enemy carries
 // its own behaviour instead of GameScene micro-managing it.
+// Its ART (which creature it looks like) comes from the world config —
+// the behaviour and the locked collision box below never change with it.
 export default class Walker extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, gridKey = null) {
-    super(scene, x, y, 'chars', FRAME_WALK);
+    const cfg = getActiveWorld().enemies.walker;
+    super(scene, x, y, cfg.sheet, cfg.walkFrame);
+    this.cfg = cfg;
     scene.add.existing(this); // register for rendering + updates
     scene.physics.add.existing(this); // give it a dynamic body
     this.gridKey = gridKey; // identity for cross-pipe level state
 
-    this.body.setSize(16, 14);
-    this.body.setOffset(4, 10); // align body bottom with the feet
+    this.body.setSize(ENEMY_BODY.width, ENEMY_BODY.height);
+    this.body.setOffset(ENEMY_BODY.offsetX, ENEMY_BODY.offsetY); // body bottom at the feet
     this.setDepth(1); // same layer as items, above terrain
     this.setCollideWorldBounds(true);
 
     this.direction = -1; // start walking left, toward the player
     this.isSquashed = false;
-    this.play('walker-walk');
+    this.play(cfg.walkAnim);
   }
 
   preUpdate(time, delta) {
@@ -55,7 +57,7 @@ export default class Walker extends Phaser.Physics.Arcade.Sprite {
       if (ground.length === 0) this.direction *= -1;
     }
 
-    this.setVelocityX(WALK_SPEED * this.direction);
+    this.setVelocityX(ENEMY_WALK_SPEED * this.direction);
     this.setFlipX(this.direction > 0);
   }
 
@@ -77,7 +79,7 @@ export default class Walker extends Phaser.Physics.Arcade.Sprite {
     this.isSquashed = true;
     this.scene.consume?.(this.gridKey);
     this.anims.stop();
-    this.setFrame(FRAME_SQUASHED);
+    this.setFrame(this.cfg.squashedFrame);
     this.body.checkCollision.none = true;
     this.body.setVelocity(0, 0);
     this.body.allowGravity = false;

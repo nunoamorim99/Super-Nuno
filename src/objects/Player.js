@@ -1,20 +1,23 @@
 import Phaser from 'phaser';
 import { sfx } from '../audio/sfx.js';
+import {
+  ACCELERATION,
+  DRAG,
+  MAX_RUN_SPEED,
+  MAX_FALL_SPEED,
+  JUMP_VELOCITY,
+  JUMP_CUT_VELOCITY,
+  EXTRA_FALL_GRAVITY,
+  BIG_SCALE,
+  STAR_DURATION,
+  HURT_INVULN_DURATION,
+  PLAYER_BODY,
+  CHAR_FRAME,
+} from '../config/constants.js';
+import { getActiveWorld } from '../config/worlds.js';
 
-// ---- Movement tuning (the "game feel" numbers) ----
-const ACCELERATION = 1600;
-const DRAG = 1300;
-const MAX_RUN_SPEED = 240;
-const MAX_FALL_SPEED = 900;
-const JUMP_VELOCITY = -480;
-const JUMP_CUT_VELOCITY = -160;
-const EXTRA_FALL_GRAVITY = 900;
-
-// ---- Power-up tuning ----
-const BIG_SCALE = 1.5; // ~2 tiles tall, like classic big Mario
-const STAR_DURATION = 8000;
+// ---- Star visuals (not tuning — just the rainbow flash) ----
 const STAR_WARNING = 2000; // flash faster during the last 2s
-const HURT_INVULN_DURATION = 2000;
 const STAR_TINTS = [0xffffff, 0xffe066, 0x66e0ff, 0xff8de1, 0x9dff8d, 0xffa05c];
 
 /**
@@ -30,7 +33,12 @@ const STAR_TINTS = [0xffffff, 0xffe066, 0x66e0ff, 0xff8de1, 0x9dff8d, 0xffa05c];
  */
 export default class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
-    super(scene, x, y, 'chars', 0);
+    // Which character this is (sheet, frames, anim keys) comes from the
+    // active world's config — world 1 will point at baby-Nuno, world 2 at
+    // kid-Nuno... The physics below never changes with it.
+    const char = getActiveWorld().character;
+    super(scene, x, y, char.sheet, char.idleFrame);
+    this.charCfg = char;
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
@@ -54,9 +62,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     return this.scene && this.scene.time.now < this.starUntil;
   }
 
-  /** FIRE uses the orange character's animations — a Kenney palette swap. */
+  /** Anim keys are `${prefix}-idle|run|jump`; the prefix per power state
+   *  comes from the world config (FIRE = a different palette/character). */
   get animPrefix() {
-    return this.powerState === 'FIRE' ? 'fire' : 'player';
+    return this.charCfg.animPrefix[this.powerState];
   }
 
   get baseScale() {
@@ -102,18 +111,18 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
    * anchor the body bottom to the frame bottom (the feet).
    */
   syncBodyToScale() {
-    const effW = 16;
-    const effH = this.powerState === 'SMALL' ? 20 : 30;
-    const unitW = effW / this.scaleX;
-    const unitH = effH / this.scaleY;
+    const box = this.powerState === 'SMALL' ? PLAYER_BODY.SMALL : PLAYER_BODY.BIG;
+    const unitW = box.width / this.scaleX;
+    const unitH = box.height / this.scaleY;
     this.body.setSize(unitW, unitH);
     // The sprite origin is its CENTRE, so a squashed frame's bottom edge
     // rises with scaleY — anchoring the body to the frame bottom would
     // lift it off the floor (and re-trigger landing forever). Anchor the
     // body bottom to the at-rest feet position instead:
-    //   bodyBottom = y + 12 * baseScale   (constant for any squash)
-    const offY = 12 + (12 * this.baseScale) / this.scaleY - unitH;
-    this.body.setOffset((24 - unitW) / 2, offY);
+    //   bodyBottom = y + (frame/2) * baseScale   (constant for any squash)
+    const half = CHAR_FRAME / 2;
+    const offY = half + (half * this.baseScale) / this.scaleY - unitH;
+    this.body.setOffset((CHAR_FRAME - unitW) / 2, offY);
   }
 
   // ------------------------------------------------------- transitions

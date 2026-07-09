@@ -1,5 +1,8 @@
 import Phaser from 'phaser';
 import { loadHighScore } from '../highscore.js';
+import { COMMON, getActiveWorld } from '../config/worlds.js';
+
+const F = COMMON.frames.tiles;
 
 // Title screen with a living slice of the game world behind the logo —
 // no physics, just sprites, animations and tweens.
@@ -25,9 +28,9 @@ export default class TitleScene extends Phaser.Scene {
       // too — so children sit 18px apart locally to end up 36px apart
       // on screen (the width of one scaled tile, i.e. seamless).
       const cloud = this.add.container(x, y, [
-        this.add.image(-18, 0, 'tiles', 153),
-        this.add.image(0, 0, 'tiles', 154),
-        this.add.image(18, 0, 'tiles', 155),
+        this.add.image(-18, 0, 'tiles', F.cloudLeft),
+        this.add.image(0, 0, 'tiles', F.cloudMid),
+        this.add.image(18, 0, 'tiles', F.cloudRight),
       ]).setScale(2);
       this.tweens.add({
         targets: cloud,
@@ -45,17 +48,18 @@ export default class TitleScene extends Phaser.Scene {
     // scenery: pipe, blocks, coins
     this.add.image(700, 414 - 9, 'pipe-mouth');
     this.add.tileSprite(700, 414 - 9 + 18, 36, 18, 'pipe-shaft');
-    this.add.image(540, 320, 'tiles', 10); // question block
-    this.add.image(558, 320, 'tiles', 6); // brick
-    this.add.sprite(180, 396, 'tiles', 151).play('coin-spin');
-    this.add.sprite(240, 350, 'tiles', 151).play('coin-spin');
-    this.add.image(80, 414, 'tiles', 125).setOrigin(0.5, 1); // bush
-    this.add.image(620, 414, 'tiles', 126).setOrigin(0.5, 1); // pine
+    this.add.image(540, 320, 'tiles', F.blockQuestion);
+    this.add.image(558, 320, 'tiles', F.brick);
+    this.add.sprite(180, 396, 'tiles', F.coin).play('coin-spin');
+    this.add.sprite(240, 350, 'tiles', F.coin).play('coin-spin');
+    this.add.image(80, 414, 'tiles', COMMON.frames.decor['*']).setOrigin(0.5, 1); // bush
+    this.add.image(620, 414, 'tiles', COMMON.frames.decor['^']).setOrigin(0.5, 1); // pine
 
     // patrolling walkers
+    const walker = getActiveWorld().enemies.walker;
     [{ from: 230, to: 470, y: 402, d: 5200 }, { from: 320, to: 180, y: 402, d: 3400 }].forEach(
       ({ from, to, y, d }) => {
-        const w = this.add.sprite(from, y, 'chars', 18).play('walker-walk');
+        const w = this.add.sprite(from, y, walker.sheet, walker.walkFrame).play(walker.walkAnim);
         w.setFlipX(to > from);
         this.tweens.add({
           targets: w,
@@ -70,7 +74,11 @@ export default class TitleScene extends Phaser.Scene {
     );
 
     // the hero, idling by the logo
-    this.add.sprite(120, 398, 'chars', 0).play('player-idle').setScale(1.5);
+    const char = getActiveWorld().character;
+    this.add
+      .sprite(120, 398, char.sheet, char.idleFrame)
+      .play(`${char.animPrefix.SMALL}-idle`)
+      .setScale(1.5);
 
     // --- logo + texts
     const logo = this.add

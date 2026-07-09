@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { GAME_WIDTH, PORTRAIT_WIDTH, GAME_HEIGHT, GRAVITY_Y } from './config/constants.js';
 import { isTouchDevice } from './input/TouchControls.js';
 import PreloadScene from './scenes/PreloadScene.js';
 import TitleScene from './scenes/TitleScene.js';
@@ -20,24 +21,21 @@ setupControlsSwap();
 // tiny. We narrow the LOGICAL view instead (540px ≈ 30 tiles of lookahead,
 // the NES showed 16), so everything renders ~45% larger.
 // NOTE: keep in sync with the #game-container aspect-ratio in index.html.
-const BASE_WIDTH = 800;
-const PORTRAIT_WIDTH = 540;
-const HEIGHT = 450;
 const portraitQuery = window.matchMedia('(orientation: portrait)');
 const logicalWidth = () =>
-  isTouchDevice() && portraitQuery.matches ? PORTRAIT_WIDTH : BASE_WIDTH;
+  isTouchDevice() && portraitQuery.matches ? PORTRAIT_WIDTH : GAME_WIDTH;
 
 const config = {
   type: Phaser.AUTO,
   parent: 'game-container',
   width: logicalWidth(),
-  height: HEIGHT,
+  height: GAME_HEIGHT,
   backgroundColor: '#5c94fc', // classic sky blue
   pixelArt: true, // nearest-neighbour scaling — keeps pixels crisp
   physics: {
     default: 'arcade',
     arcade: {
-      gravity: { y: 1000 },
+      gravity: { y: GRAVITY_Y },
       debug: false,
     },
   },
@@ -62,7 +60,7 @@ const game = new Phaser.Game(config);
 
 // Rotating the device switches between the wide and narrow logical view
 portraitQuery.addEventListener('change', () => {
-  game.scale.setGameSize(logicalWidth(), HEIGHT);
+  game.scale.setGameSize(logicalWidth(), GAME_HEIGHT);
   game.scale.refresh();
 });
 

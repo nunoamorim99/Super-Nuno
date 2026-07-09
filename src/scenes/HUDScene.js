@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { sfx } from '../audio/sfx.js';
+import { COMMON, getActiveWorld } from '../config/worlds.js';
 
 // The in-game HUD: SCORE, COINS, WORLD, TIME, LIVES + pause/fullscreen.
 // Laid out from the CURRENT game width (the logical view is narrower on
@@ -34,8 +35,12 @@ export default class HUDScene extends Phaser.Scene {
       time: mkText('', '#ffffff'),
       lives: mkText('', '#ffffff'),
     };
-    this.coinIcon = this.add.sprite(0, 0, 'tiles', 151).play('coin-spin').setScale(0.9);
-    this.livesIcon = this.add.sprite(0, 0, 'chars', 0).setScale(0.8);
+    const char = getActiveWorld().character;
+    this.coinIcon = this.add
+      .sprite(0, 0, 'tiles', COMMON.frames.tiles.coin)
+      .play('coin-spin')
+      .setScale(0.9);
+    this.livesIcon = this.add.sprite(0, 0, char.sheet, char.idleFrame).setScale(0.8);
 
     const corner = (txt, onTap) => {
       const btn = this.add

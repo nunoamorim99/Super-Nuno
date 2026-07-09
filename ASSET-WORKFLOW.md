@@ -28,14 +28,63 @@ Sizes are fixed by AstroHop and must not drift, or placement and collision break
 | `tilemap-characters_packed.png` | **24×24** | `chars` | Nuno + enemies (overhang the 18 grid) |
 | `tilemap-backgrounds_packed.png` | **24×24** | `bg` | background elements |
 
-Phaser slices these by `frameWidth/frameHeight` and references frames **by index**. The
-game therefore depends on knowing which index is what. **Assessment task (Phase 1):**
-complete and record the frame map. Known from AstroHop:
-- `tiles`: grass top `2`, dirt fill `122`, cave floor `42`, packed dirt `142`,
-  snow top `81`.
-- `chars`: player base `0`; walker walk `18`,`19`; walker squashed `20`.
+Phaser slices these by `frameWidth/frameHeight` and references frames **by index**,
+left→right then top→bottom: `index = row × columns + column`. Sheet geometry:
 
-Record the rest (coins, `?` block, brick, pipe, flag, castle, items) here as it's mapped.
+| Sheet | Image size | Grid | Frames |
+|---|---|---|---|
+| `tiles` | 360×162 | **20 columns** × 9 rows | 0–179 |
+| `chars` | 216×72 | **9 columns** × 3 rows | 0–26 |
+| `bg` | 192×72 | **8 columns** × 3 rows | 0–23 |
+
+### Frame map (Phase 1 assessment — every index below is code-verified in-game)
+
+The single source of truth in code is `src/config/worlds.js` (`COMMON.frames`,
+`COMMON.anims`, `COMMON.themes`). This table documents it for humans; update BOTH when
+mapping a new frame.
+
+**`tiles` (18×18):**
+
+| Frame(s) | What | Used as |
+|---|---|---|
+| 2 | grass top | overworld `terrainTop` |
+| 6 | brick | `B` |
+| 10 | `?` block | `?` `M` `S` |
+| 31 | used/empty block | opened `?`, hidden `H` |
+| 42 | cave floor | underground `terrainTop` |
+| 67 | blue gem | recolored → `gem-fire`, `gem-star` |
+| 76–79 | floating platform (single/left/mid/right) | `P` runs |
+| 81 | snow-capped ground | snow `terrainTop` |
+| 86 | sign (right arrow) | decor `>` |
+| 111–112 | flag (2 wave frames) | `F` + `flag-wave` |
+| 121 | dirt | snow `terrainFill` |
+| 122 | dirt | overworld `terrainFill` |
+| 124 | sprout | decor `"` |
+| 125 | bush | decor `*` |
+| 126 | pine tree | decor `^` |
+| 128 | red mushroom | grow item (R/G-swapped → 1-UP) |
+| 130 / 150 | door top / bottom | `d` (castle door) |
+| 131 | pole | flagpole shaft |
+| 142 | packed dirt | underground `terrainFill` |
+| 145 | snowman | decor `o` |
+| 151–152 | coin (face/edge) | `c` + `coin-spin` |
+| 153–156 | cloud left/mid/right/small | parallax + title |
+
+**`chars` (24×24)** — row 0 = frames 0–8, row 1 = 9–17, row 2 = 18–26:
+
+| Frame(s) | What | Used as |
+|---|---|---|
+| 0, 1 | green character (stand, walk) | player SMALL/BIG idle/run/jump |
+| 6, 7 | orange character (stand, walk) | player FIRE (palette-swap tradition) |
+| 18, 19 | blue slime walk | walker enemy |
+| 20 | blue slime squashed | walker stomped |
+
+**`bg` (24×24):** 8–11 = rolling-hills strip (row 1, cols 0–3) → `tex-hills` parallax.
+
+Frames not listed are **unmapped** — Kenney extras available for new components. Pipes,
+fireball, and the recolored gems/1-UP are **generated at load time** in `PreloadScene`
+(no sheet frames). When the component editor exports something new, it stops being a
+frame-map question entirely — the manifest names it.
 
 ---
 

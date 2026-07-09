@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { TILE, CHAR_FRAME } from '../config/constants.js';
+import { COMMON } from '../config/worlds.js';
 
 const TILEMAP_DIR = 'assets/kenney_pixel-platformer/Tilemap';
 
@@ -26,25 +28,26 @@ export default class PreloadScene extends Phaser.Scene {
     // Phaser slices them by frameWidth/frameHeight and numbers the
     // frames left-to-right, top-to-bottom (0, 1, 2, ...).
     this.load.spritesheet('tiles', `${TILEMAP_DIR}/tilemap_packed.png`, {
-      frameWidth: 18,
-      frameHeight: 18,
+      frameWidth: TILE,
+      frameHeight: TILE,
     });
     this.load.spritesheet('chars', `${TILEMAP_DIR}/tilemap-characters_packed.png`, {
-      frameWidth: 24,
-      frameHeight: 24,
+      frameWidth: CHAR_FRAME,
+      frameHeight: CHAR_FRAME,
     });
     this.load.spritesheet('bg', `${TILEMAP_DIR}/tilemap-backgrounds_packed.png`, {
-      frameWidth: 24,
-      frameHeight: 24,
+      frameWidth: CHAR_FRAME,
+      frameHeight: CHAR_FRAME,
     });
   }
 
   create() {
     // TileSprites repeat a whole texture, not a single frame of a sheet —
     // so we copy the frames we want to repeat into small standalone textures.
-    this.makeTilingTexture('tex-grass-top', 'tiles', [2]);
-    this.makeTilingTexture('tex-dirt', 'tiles', [122]);
-    this.makeTilingTexture('tex-hills', 'bg', [8, 9, 10, 11], BG_SKY_COLOR);
+    const overworld = COMMON.themes.overworld;
+    this.makeTilingTexture('tex-grass-top', 'tiles', [overworld.terrainTop]);
+    this.makeTilingTexture('tex-dirt', 'tiles', [overworld.terrainFill]);
+    this.makeTilingTexture('tex-hills', 'bg', COMMON.frames.hills, BG_SKY_COLOR);
     this.makeFireballTexture();
 
     // Tints in Phaser MULTIPLY colours, so they can only darken — an
@@ -52,9 +55,10 @@ export default class PreloadScene extends Phaser.Scene {
     // we rewrite the pixels instead:
     // fire gem: swap red/blue channels → blue gem becomes orange,
     // with all of its shading intact.
-    this.makeRecoloredTexture('gem-fire', 'tiles', 67, (r, g, b) => [b, g, r]);
+    const gem = COMMON.frames.tiles.gemBlue;
+    this.makeRecoloredTexture('gem-fire', 'tiles', gem, (r, g, b) => [b, g, r]);
     // star gem: bright neutral version → rainbow tints stay vivid.
-    this.makeRecoloredTexture('gem-star', 'tiles', 67, (r, g, b) => {
+    this.makeRecoloredTexture('gem-star', 'tiles', gem, (r, g, b) => {
       const l = Math.min(255, Math.round(Math.max(r, g, b) * 1.15));
       return [l, l, l];
     });
@@ -67,7 +71,7 @@ export default class PreloadScene extends Phaser.Scene {
     spark.context.fillRect(0, 0, 4, 4);
     spark.refresh();
     // 1-UP mushroom: swap R/G — the red cap turns green.
-    this.makeRecoloredTexture('mushroom-1up', 'tiles', 128, (r, g, b) => [g, r, b]);
+    this.makeRecoloredTexture('mushroom-1up', 'tiles', COMMON.frames.tiles.mushroom, (r, g, b) => [g, r, b]);
 
     this.createAnimations();
 
@@ -190,62 +194,16 @@ export default class PreloadScene extends Phaser.Scene {
 
   createAnimations() {
     // Animations are global (stored in the AnimationManager), so defining
-    // them once here makes them available to every scene.
-    // The Kenney characters have 2 frames each: standing (0) and walking (1).
-    this.anims.create({
-      key: 'player-idle',
-      frames: [{ key: 'chars', frame: 0 }],
-    });
-    this.anims.create({
-      key: 'player-run',
-      frames: this.anims.generateFrameNumbers('chars', { frames: [0, 1] }),
-      frameRate: 10,
-      repeat: -1, // loop forever
-    });
-    this.anims.create({
-      key: 'player-jump',
-      frames: [{ key: 'chars', frame: 1 }],
-    });
-
-    // FIRE state = the orange character (frames 6/7) — same poses,
-    // different palette, exactly how retro games did "fire Mario"
-    this.anims.create({
-      key: 'fire-idle',
-      frames: [{ key: 'chars', frame: 6 }],
-    });
-    this.anims.create({
-      key: 'fire-run',
-      frames: this.anims.generateFrameNumbers('chars', { frames: [6, 7] }),
-      frameRate: 10,
-      repeat: -1,
-    });
-    this.anims.create({
-      key: 'fire-jump',
-      frames: [{ key: 'chars', frame: 7 }],
-    });
-
-    // Coin: face/edge-on frames alternating reads as a spin
-    this.anims.create({
-      key: 'coin-spin',
-      frames: this.anims.generateFrameNumbers('tiles', { frames: [151, 152] }),
-      frameRate: 6,
-      repeat: -1,
-    });
-
-    // Walker enemy (blue slime): two-frame shuffle
-    this.anims.create({
-      key: 'walker-walk',
-      frames: this.anims.generateFrameNumbers('chars', { frames: [18, 19] }),
-      frameRate: 6,
-      repeat: -1,
-    });
-
-    // End-of-level flag waving on its pole
-    this.anims.create({
-      key: 'flag-wave',
-      frames: this.anims.generateFrameNumbers('tiles', { frames: [111, 112] }),
-      frameRate: 3,
-      repeat: -1,
-    });
+    // them once here makes them available to every scene. They are DATA in
+    // the world config, not code — Phase 2 moves that data into each
+    // pack's manifest, and this loop won't have to change.
+    for (const a of COMMON.anims) {
+      this.anims.create({
+        key: a.key,
+        frames: this.anims.generateFrameNumbers(a.sheet, { frames: a.frames }),
+        frameRate: a.frameRate ?? 0,
+        repeat: a.repeat ?? 0,
+      });
+    }
   }
 }

@@ -2,41 +2,16 @@ import Phaser from 'phaser';
 import Player from '../objects/Player.js';
 import Walker from '../objects/Walker.js';
 import { touchState } from '../input/TouchControls.js';
-import { LEVELS, THEMES } from '../levels/index.js';
+import { LEVELS } from '../levels/index.js';
 import { sfx } from '../audio/sfx.js';
+import { TILE, GAME_WIDTH, GAME_HEIGHT } from '../config/constants.js';
+import { COMMON, getActiveWorld, resolveTheme } from '../config/worlds.js';
 
-// ---- World ----
-const GAME_WIDTH = 800;
-const GAME_HEIGHT = 450;
-const TILE = 18;
 const ROWS = GAME_HEIGHT / TILE; // 25 — world height is fixed
 
-// ---- Tile frame indices in the 'tiles' spritesheet ----
-const T = {
-  PLATFORM_SINGLE: 76,
-  PLATFORM_LEFT: 77,
-  PLATFORM_MID: 78,
-  PLATFORM_RIGHT: 79,
-  CLOUD_LEFT: 153,
-  CLOUD_MID: 154,
-  CLOUD_RIGHT: 155,
-  CLOUD_SMALL: 156,
-  SIGN_RIGHT: 86,
-  SPROUT: 124,
-  BUSH: 125,
-  PINE: 126,
-  COIN: 151,
-  BLOCK_QUESTION: 10,
-  BLOCK_USED: 31,
-  BRICK: 6,
-  MUSHROOM: 128,
-  POLE: 131,
-  FLAG: 111,
-  DOOR_TOP: 130,
-  DOOR_BOTTOM: 150,
-};
-
-const DECOR = { '>': T.SIGN_RIGHT, '*': T.BUSH, '^': T.PINE, '"': T.SPROUT, o: 145 /* snowman */ };
+// Shared game-grammar frames + decoration map (see ASSET-WORKFLOW.md §1)
+const F = COMMON.frames.tiles;
+const DECOR = COMMON.frames.decor;
 
 const STOMP_BOUNCE = -300;
 
@@ -74,7 +49,8 @@ export default class GameScene extends Phaser.Scene {
 
   create() {
     this.level = LEVELS[this.levelId];
-    this.theme = THEMES[this.level.theme];
+    this.worldCfg = getActiveWorld();
+    this.theme = resolveTheme(this.worldCfg, this.level.theme);
     this.worldWidth = this.level.width * TILE;
 
     if (!this.scene.isActive('HUDScene')) this.scene.launch('HUDScene');
@@ -198,27 +174,27 @@ export default class GameScene extends Phaser.Scene {
 
         switch (ch) {
           case 'B':
-            if (!gone) this.addBlock(x, y, T.BRICK, 'brick', null, key);
+            if (!gone) this.addBlock(x, y, F.brick, 'brick', null, key);
             break;
           case '?':
-            if (gone) this.addBlock(x, y, T.BLOCK_USED, 'used', null, key);
-            else this.addBlock(x, y, T.BLOCK_QUESTION, 'question', 'coin', key);
+            if (gone) this.addBlock(x, y, F.blockUsed, 'used', null, key);
+            else this.addBlock(x, y, F.blockQuestion, 'question', 'coin', key);
             break;
           case 'M':
-            if (gone) this.addBlock(x, y, T.BLOCK_USED, 'used', null, key);
-            else this.addBlock(x, y, T.BLOCK_QUESTION, 'question', 'powerup', key);
+            if (gone) this.addBlock(x, y, F.blockUsed, 'used', null, key);
+            else this.addBlock(x, y, F.blockQuestion, 'question', 'powerup', key);
             break;
           case 'S':
-            if (gone) this.addBlock(x, y, T.BLOCK_USED, 'used', null, key);
-            else this.addBlock(x, y, T.BLOCK_QUESTION, 'question', 'star', key);
+            if (gone) this.addBlock(x, y, F.blockUsed, 'used', null, key);
+            else this.addBlock(x, y, F.blockQuestion, 'question', 'star', key);
             break;
           case 'H':
-            if (gone) this.addBlock(x, y, T.BLOCK_USED, 'used', null, key);
+            if (gone) this.addBlock(x, y, F.blockUsed, 'used', null, key);
             else this.addHiddenBlock(x, y, key);
             break;
           case 'c': {
             if (gone) break;
-            const coin = this.add.sprite(x, y, 'tiles', T.COIN).play('coin-spin');
+            const coin = this.add.sprite(x, y, 'tiles', F.coin).play('coin-spin');
             this.physics.add.existing(coin, true);
             coin.setData('key', key);
             this.coins.add(coin);
@@ -264,10 +240,10 @@ export default class GameScene extends Phaser.Scene {
   buildPlatform(startCol, run, row) {
     const y = row * TILE + TILE / 2;
     for (let i = 0; i < run; i++) {
-      let frame = T.PLATFORM_MID;
-      if (run === 1) frame = T.PLATFORM_SINGLE;
-      else if (i === 0) frame = T.PLATFORM_LEFT;
-      else if (i === run - 1) frame = T.PLATFORM_RIGHT;
+      let frame = F.platformMid;
+      if (run === 1) frame = F.platformSingle;
+      else if (i === 0) frame = F.platformLeft;
+      else if (i === run - 1) frame = F.platformRight;
       this.add.image((startCol + i) * TILE + TILE / 2, y, 'tiles', frame);
     }
     this.addSolid(startCol * TILE + (run * TILE) / 2, y, run * TILE, TILE);
@@ -303,10 +279,10 @@ export default class GameScene extends Phaser.Scene {
     const bottomRow = this.findFloorRow(col, topRow);
     const x = col * TILE + TILE / 2;
 
-    this.flagSprite = this.add.sprite(x, topRow * TILE + TILE / 2, 'tiles', T.FLAG);
+    this.flagSprite = this.add.sprite(x, topRow * TILE + TILE / 2, 'tiles', F.flag);
     this.flagSprite.play('flag-wave');
     for (let row = topRow + 1; row < bottomRow; row++) {
-      this.add.image(x, row * TILE + TILE / 2, 'tiles', T.POLE);
+      this.add.image(x, row * TILE + TILE / 2, 'tiles', F.pole);
     }
 
     this.flagInfo = { x, topY: topRow * TILE, bottomY: bottomRow * TILE };
@@ -316,8 +292,8 @@ export default class GameScene extends Phaser.Scene {
 
   buildDoor(col, row) {
     const x = col * TILE + TILE / 2;
-    this.add.image(x, (row - 1) * TILE + TILE / 2, 'tiles', T.DOOR_TOP);
-    this.add.image(x, row * TILE + TILE / 2, 'tiles', T.DOOR_BOTTOM);
+    this.add.image(x, (row - 1) * TILE + TILE / 2, 'tiles', F.doorTop);
+    this.add.image(x, row * TILE + TILE / 2, 'tiles', F.doorBottom);
     this.doorX = x;
   }
 
@@ -331,7 +307,7 @@ export default class GameScene extends Phaser.Scene {
 
   /** Invisible block: no body until hit from below (via its sensor). */
   addHiddenBlock(x, y, key) {
-    const block = this.addBlock(x, y, T.BLOCK_USED, 'hidden', null, key);
+    const block = this.addBlock(x, y, F.blockUsed, 'hidden', null, key);
     block.setVisible(false);
     block.body.enable = false;
 
@@ -411,11 +387,11 @@ export default class GameScene extends Phaser.Scene {
     for (let x = 100; x < span; x += Phaser.Math.Between(160, 240)) {
       const y = Phaser.Math.Between(50, 130);
       if (Phaser.Math.Between(0, 2) === 2) {
-        this.add.image(x, y, 'tiles', T.CLOUD_SMALL).setScale(2).setScrollFactor(0.2).setDepth(-10);
+        this.add.image(x, y, 'tiles', F.cloudSmall).setScale(2).setScrollFactor(0.2).setDepth(-10);
       } else {
-        this.add.image(x - 36, y, 'tiles', T.CLOUD_LEFT).setScale(2).setScrollFactor(0.2).setDepth(-10);
-        this.add.image(x, y, 'tiles', T.CLOUD_MID).setScale(2).setScrollFactor(0.2).setDepth(-10);
-        this.add.image(x + 36, y, 'tiles', T.CLOUD_RIGHT).setScale(2).setScrollFactor(0.2).setDepth(-10);
+        this.add.image(x - 36, y, 'tiles', F.cloudLeft).setScale(2).setScrollFactor(0.2).setDepth(-10);
+        this.add.image(x, y, 'tiles', F.cloudMid).setScale(2).setScrollFactor(0.2).setDepth(-10);
+        this.add.image(x + 36, y, 'tiles', F.cloudRight).setScale(2).setScrollFactor(0.2).setDepth(-10);
       }
     }
   }
@@ -439,12 +415,12 @@ export default class GameScene extends Phaser.Scene {
   openQuestionBlock(block) {
     const content = block.getData('content');
     block.setData('type', 'used');
-    block.setFrame(T.BLOCK_USED);
+    block.setFrame(F.blockUsed);
     this.consume(block.getData('key'));
     this.bumpBlock(block);
 
     if (content === 'coin') {
-      const coin = this.add.sprite(block.x, block.y - TILE, 'tiles', T.COIN).play('coin-spin');
+      const coin = this.add.sprite(block.x, block.y - TILE, 'tiles', F.coin).play('coin-spin');
       sfx.play('coin');
       this.sparkle(block.x, block.y - TILE);
       this.addScore(SCORE_COIN, block.x, block.y - TILE * 2);
@@ -458,7 +434,7 @@ export default class GameScene extends Phaser.Scene {
         onComplete: () => coin.destroy(),
       });
     } else if (content === 'powerup') {
-      if (this.player.powerState === 'SMALL') this.spawnWalkingItem(block, 'mushroom', 'tiles', T.MUSHROOM);
+      if (this.player.powerState === 'SMALL') this.spawnWalkingItem(block, 'mushroom', 'tiles', F.mushroom);
       else this.spawnFireGem(block);
     } else if (content === 'star') {
       this.spawnStar(block);
@@ -478,7 +454,7 @@ export default class GameScene extends Phaser.Scene {
       [-110, -180], [110, -180],
     ];
     bursts.forEach(([vx, vy]) => {
-      const frag = this.add.image(x, y, 'tiles', T.BRICK).setScale(0.5);
+      const frag = this.add.image(x, y, 'tiles', F.brick).setScale(0.5);
       this.physics.add.existing(frag);
       frag.body.checkCollision.none = true;
       frag.body.setVelocity(vx + Phaser.Math.Between(-20, 20), vy + Phaser.Math.Between(-40, 0));
