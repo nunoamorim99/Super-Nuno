@@ -11,6 +11,9 @@ export default class IntroScene extends Phaser.Scene {
   init(data) {
     this.levelId = data.levelId ?? 'level1';
     this.powerState = data.powerState ?? 'SMALL'; // carried across levels
+    // every fresh level entry marks the run score — the delta at the
+    // flag is this level's score, recorded as its personal best
+    this.registry.set('levelStartScore', this.registry.get('score') ?? 0);
   }
 
   create() {

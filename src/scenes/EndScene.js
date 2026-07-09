@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { saveHighScore } from '../highscore.js';
+import { submitRunScore } from '../save/progress.js';
 
 // Shown after the last level: thanks, then back to the title screen.
 export default class EndScene extends Phaser.Scene {
@@ -12,7 +12,7 @@ export default class EndScene extends Phaser.Scene {
     this.scene.stop('HUDScene');
     this.cameras.main.setBackgroundColor('#000000');
     this.scale.once('resize', () => this.scene.restart());
-    saveHighScore(this.registry.get('score') ?? 0);
+    submitRunScore(this.registry.get('score') ?? 0);
 
     this.add
       .text(width / 2, height / 2 - 60, 'WORLD 1 COMPLETE!', {

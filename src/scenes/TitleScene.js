@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
-import { loadHighScore } from '../highscore.js';
 import { COMMON, getActiveWorld } from '../config/worlds.js';
-import { lastLevel, setLastLevel } from '../save/progress.js';
+import { lastLevel, setLastLevel, highScore, unlockAll } from '../save/progress.js';
 
 const F = COMMON.frames.tiles;
 
@@ -111,7 +110,7 @@ export default class TitleScene extends Phaser.Scene {
       .setStroke('#000000', 3);
 
     this.add
-      .text(width / 2, 205, `HI ${String(loadHighScore()).padStart(6, '0')}`, {
+      .text(width / 2, 205, `HI ${String(highScore()).padStart(6, '0')}`, {
         fontFamily: 'monospace',
         fontSize: '18px',
         fontStyle: 'bold',
@@ -179,6 +178,13 @@ export default class TitleScene extends Phaser.Scene {
         {
           label: 'COMPONENT EDITOR',
           run: () => window.open('tools/editors/component/index.html', '_blank'),
+        },
+        {
+          label: 'UNLOCK ALL',
+          run: () => {
+            unlockAll();
+            this.scene.restart(); // menu + selects reflect it immediately
+          },
         }
       );
     }

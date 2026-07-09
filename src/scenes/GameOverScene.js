@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { saveHighScore } from '../highscore.js';
+import { submitRunScore } from '../save/progress.js';
 
 export default class GameOverScene extends Phaser.Scene {
   constructor() {
@@ -11,7 +11,7 @@ export default class GameOverScene extends Phaser.Scene {
     this.scene.stop('HUDScene');
     this.cameras.main.setBackgroundColor('#000000');
     this.scale.once('resize', () => this.scene.restart());
-    saveHighScore(this.registry.get('score') ?? 0);
+    submitRunScore(this.registry.get('score') ?? 0);
 
     this.add
       .text(width / 2, height / 2 - 20, 'GAME OVER', {

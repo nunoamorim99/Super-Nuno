@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { saveHighScore } from '../highscore.js';
+import { submitRunScore } from '../save/progress.js';
 
 // Overlay launched on top of a paused GameScene.
 // Works with keyboard (arrows + enter), mouse and touch.
@@ -71,7 +71,7 @@ export default class PauseScene extends Phaser.Scene {
   }
 
   quitToTitle() {
-    saveHighScore(this.registry.get('score') ?? 0);
+    submitRunScore(this.registry.get('score') ?? 0);
     this.scene.stop('GameScene');
     this.scene.stop('HUDScene');
     this.scene.start('TitleScene');

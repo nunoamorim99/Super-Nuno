@@ -6,7 +6,7 @@ import { LEVELS } from '../levels/index.js';
 import { sfx } from '../audio/sfx.js';
 import { TILE, GAME_WIDTH, GAME_HEIGHT } from '../config/constants.js';
 import { COMMON, getActiveWorld, resolveTheme } from '../config/worlds.js';
-import { markCompleted, setLastLevel } from '../save/progress.js';
+import { markCompleted, setLastLevel, recordLevelScore } from '../save/progress.js';
 
 const ROWS = GAME_HEIGHT / TILE; // 25 — world height is fixed
 
@@ -836,6 +836,10 @@ export default class GameScene extends Phaser.Scene {
       this.registry.set('time', 0);
       this.addScore(t * 50, this.player.x, this.player.y - 40);
     }
+
+    // this level's haul (incl. flag + time bonus) → its personal best
+    const levelScore = this.registry.values.score - (this.registry.get('levelStartScore') ?? 0);
+    recordLevelScore(this.levelId, levelScore);
 
     this.tweens.add({ targets: this.player, alpha: 0, duration: 250 }); // into the door
     this.cameras.main.fadeOut(700);

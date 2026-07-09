@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import { loadHighScore } from '../highscore.js';
+import { LEVELS } from '../levels/index.js';
 import { WORLDS } from '../config/worlds.js';
-import { isCompleted } from '../save/progress.js';
+import { isCompleted, highScore, bestScore } from '../save/progress.js';
 
 // Local scoreboard: the high score plus completion at a glance.
 // Phase 7 expands this with per-level bests from the full save system.
@@ -26,7 +26,7 @@ export default class ScoreboardScene extends Phaser.Scene {
       .setStroke('#000000', 5);
 
     this.add
-      .text(width / 2, 140, `HIGH SCORE   ${String(loadHighScore()).padStart(6, '0')}`, {
+      .text(width / 2, 116, `HIGH SCORE   ${String(highScore()).padStart(6, '0')}`, {
         fontFamily: 'monospace',
         fontSize: '24px',
         fontStyle: 'bold',
@@ -35,19 +35,34 @@ export default class ScoreboardScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setStroke('#000000', 4);
 
-    let y = 200;
+    let y = 168;
     for (const world of Object.values(WORLDS)) {
       if (world.levels.length === 0) continue;
       const done = world.levels.filter(isCompleted).length;
       this.add
-        .text(width / 2, y, `${world.title}   ${done}/${world.levels.length} levels`, {
+        .text(width / 2, y, `— ${world.title}  ·  ${done}/${world.levels.length} —`, {
           fontFamily: 'monospace',
-          fontSize: '17px',
-          color: done === world.levels.length ? '#9dff8d' : '#ffffff',
+          fontSize: '15px',
+          fontStyle: 'bold',
+          color: done === world.levels.length ? '#9dff8d' : '#8a9bd8',
         })
-        .setOrigin(0.5)
-        .setStroke('#000000', 3);
-      y += 30;
+        .setOrigin(0.5);
+      y += 26;
+      for (const id of world.levels) {
+        const best = bestScore(id);
+        const line = `${isCompleted(id) ? '✓' : '·'} ${LEVELS[id].name.padEnd(12)} best ${
+          best ? String(best).padStart(6, '0') : '——————'
+        }`;
+        this.add
+          .text(width / 2, y, line, {
+            fontFamily: 'monospace',
+            fontSize: '15px',
+            color: isCompleted(id) ? '#ffffff' : '#667',
+          })
+          .setOrigin(0.5);
+        y += 22;
+      }
+      y += 8;
     }
 
     const prompt = this.add
